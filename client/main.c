@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <string.h>
+#include "../include/banned.h"
+
 #define MAX_COMMAND_SIZE 64
 // clang-format off
 #define EVER ;;
