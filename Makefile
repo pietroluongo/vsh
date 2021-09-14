@@ -1,10 +1,10 @@
 # OBJS	= ./build/fileSorter.o ./build/fileMerger.o ./build/tokenizer.o ./build/heap.o ./build/main.o
 
-OBJS = ./build/main.o
+OBJS = ./build/main.o ./build/vsh.o
 
 # SOURCE	= client/main.c src/fileSorter.c src/fileSorter.c src/tokenizer.c src/heap.c
 
-SOURCE = client/main.c
+SOURCE = client/main.c src/vsh.c
 
 # HEADER	=
 # OUT	= trab2
@@ -31,6 +31,9 @@ all: | mkBuildDir $(OBJS)
 
 build/main.o: client/main.c
 	$(CC) $(FLAGS) client/main.c -o ./build/main.o -std=c11
+
+build/vsh.o: src/vsh.c
+	$(CC) $(FLAGS) src/vsh.c -o ./build/vsh.o -std=c11
 
 clean:
 	rm -rf build/
