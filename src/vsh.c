@@ -1,5 +1,6 @@
 #include "../include/vsh.h"
 
+#include "../include/utils.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -27,14 +28,12 @@ int isExitCommand(char* command) { return !strcmp(command, "exit"); }
 
 int isDebugCommand(char* command) { return !strcmp(command, "debug"); }
 
-void rtrim(char* str) { str[strcspn(str, "\n")] = 0; }
-
 void vsh_mainLoop() {
     for (EVER) {
         printf("vsh> ");
         char command[MAX_COMMAND_SIZE];
         fgets(command, MAX_COMMAND_SIZE, stdin);
-        rtrim(command);
+        utils_rtrim(command);
         if (isExitCommand(command)) {
             break;
         }
