@@ -8,6 +8,13 @@
 #define EVER ;;
 // clang-format on
 
+
+// Auxiliary internal functions
+int isExitCommand(char* command);
+int isDebugCommand(char* command);
+void bolsonaro();
+
+
 void bolsonaro() {
     char* vaccinatedGuy[] = {
         "\n",
