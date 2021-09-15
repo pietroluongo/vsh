@@ -12,6 +12,11 @@
 #define EVER ;;
 // clang-format on
 
+typedef struct commandDataArray {
+    CommandData* data;
+    ssize_t size;
+}CommandDataArray;
+
 // Auxiliary internal functions
 int isExitCommand(char* command);
 int isDebugCommand(char* command);
@@ -19,6 +24,8 @@ void showProcessExitStatus(int status, pid_t childPid);
 void printCreatedCommandData(CommandData* cData);
 void readCommandFromStdin(char* whereToStore);
 char* getCommandProgram(CommandData* command);
+CommandDataArray* buildCommandStructsFromLine(char* line);
+void freeCommandDataArray(CommandDataArray* commandData);
 void printPromptHeader();
 void bolsonaro();
 
@@ -66,6 +73,24 @@ void printCreatedCommandData(CommandData* cData) {
     printf("-----------------------------------------\n");
 }
 
+CommandDataArray* buildCommandStructsFromLine(char* line) {
+    CommandDataArray* arr = malloc(sizeof(CommandDataArray));
+    CommandData* commands = malloc(MAX_COMMANDS_PER_LINE * sizeof(CommandData));
+    int iterator = 0;
+    char* separatedCommands = strtok(line, "|");
+    while (separatedCommands) {
+        printf("Separated command: %s\n", separatedCommands);
+        char* separatedArgs = strtok(line, " ");
+        char iterator2 = 0;
+        while (separatedArgs) {
+        }
+        separatedCommands = strtok(NULL, "|");
+    }
+    arr->size = 0;
+    arr->data = commands;
+    return arr;
+}
+
 void readCommandFromStdin(char* whereToStore) {
     fgets(whereToStore, MAX_COMMAND_SIZE, stdin);
     utils_rtrim(whereToStore);
@@ -82,6 +107,8 @@ void vsh_mainLoop() {
         printPromptHeader();
         char command[MAX_COMMAND_SIZE];
         readCommandFromStdin(command);
+        CommandDataArray* parsedCommandList = buildCommandStructsFromLine(command);
+        CommandData* parsedCommands = parsedCommandList->data;
         if (isExitCommand(command)) {
             break;
         }
@@ -96,7 +123,16 @@ void vsh_mainLoop() {
         printCreatedCommandData(&commandData);
         execForegroundCommand(&commandData);
         free(argv);
+        freeCommandDataArray(parsedCommandList);
     }
+}
+
+void freeCommandDataArray(CommandDataArray * commandData) {
+    //    for(int i = 0; i < commandData->size; i++) {
+    //        free(commandData->data[i]);
+    //    }
+    free(commandData->data);
+    free(commandData);
 }
 
 int execForegroundCommand(CommandData* command) {
