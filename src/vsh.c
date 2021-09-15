@@ -1,19 +1,21 @@
 #include "../include/vsh.h"
 
-#include "../include/utils.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#include "../include/utils.h"
 
 // clang-format off
 #define EVER ;;
 // clang-format on
 
-
 // Auxiliary internal functions
 int isExitCommand(char* command);
 int isDebugCommand(char* command);
 void bolsonaro();
-
 
 void bolsonaro() {
     char* vaccinatedGuy[] = {
@@ -48,5 +50,37 @@ void vsh_mainLoop() {
             bolsonaro();
         }
         printf("got command %s\n", command);
+        CommandData commandData;
+        commandData.command = command;
+        commandData.args = NULL;
+        execForegroundCommand(&commandData);
+    }
+}
+
+int execForegroundCommand(CommandData* command) {
+    pid_t pid;
+    pid = fork();
+    if (pid == -1) {
+        printf("Erro executando o fork\n");
+        exit(1);
+    }
+    int wstatus;
+    if (utils_isChildProcess(pid)) {
+        char** param = command->args;
+        int execStat = execvp(command->command, &command->command);
+        if (execStat < 0) {
+            printf("Erro executando comando %s\n", command);
+            exit(1);
+        }
+    } else {
+        waitpid(pid, &wstatus, 0);
+        if (WIFEXITED(wstatus)) {
+            printf("[Shell] Process %ld exited with code %d\n", pid,
+                   WEXITSTATUS(wstatus));
+        }
+        if (WIFSIGNALED(wstatus)) {
+            printf("[Shell] Process %ld signaled with code %ld\n", pid,
+                   WTERMSIG(wstatus));
+        }
     }
 }
