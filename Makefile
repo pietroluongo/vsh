@@ -11,7 +11,7 @@ SOURCE = client/main.c src/vsh.c src/utils.c
 OUT = vsh
 CC	 = gcc
 # FLAGS	 = -O3 -c -DNDEBUG
-FLAGS = -g -c
+FLAGS = -g -c -std=gnu11
 LFLAGS	 = -lm 
 
 all: | mkBuildDir $(OBJS)
@@ -30,13 +30,13 @@ all: | mkBuildDir $(OBJS)
 #	$(CC) $(FLAGS) src/heap.c -o ./build/heap.o -std=c11
 
 build/main.o: client/main.c
-	$(CC) $(FLAGS) client/main.c -o ./build/main.o -std=c11
+	$(CC) $(FLAGS) client/main.c -o ./build/main.o
 
 build/vsh.o: src/vsh.c
-	$(CC) $(FLAGS) src/vsh.c -o ./build/vsh.o -std=c11
+	$(CC) $(FLAGS) src/vsh.c -o ./build/vsh.o
 
 build/utils.o: src/utils.c
-	$(CC) $(FLAGS) src/utils.c -o ./build/utils.o -std=c11
+	$(CC) $(FLAGS) src/utils.c -o ./build/utils.o
 
 clean:
 	rm -rf build/
