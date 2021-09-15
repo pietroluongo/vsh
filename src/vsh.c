@@ -15,7 +15,8 @@
 // Auxiliary internal functions
 int isExitCommand(char* command);
 int isDebugCommand(char* command);
-void showProcessExitStatus(int* status, pid_t childPid);
+void showProcessExitStatus(int status, pid_t childPid);
+void printCreatedCommandData(CommandData* cData);
 void bolsonaro();
 
 void bolsonaro() {
@@ -38,7 +39,7 @@ int isExitCommand(char* command) { return !strcmp(command, "exit"); }
 
 int isDebugCommand(char* command) { return !strcmp(command, "debug"); }
 
-void showProcessExitStatus(int* wstatus, pid_t childPid) {
+void showProcessExitStatus(int wstatus, pid_t childPid) {
     if (WIFEXITED(wstatus)) {
         printf("[Shell] Process %ld exited with code %d\n", childPid,
                WEXITSTATUS(wstatus));
@@ -47,6 +48,17 @@ void showProcessExitStatus(int* wstatus, pid_t childPid) {
         printf("[Shell] Process %ld signaled with code %ld\n", childPid,
                WTERMSIG(wstatus));
     }
+}
+
+void printCreatedCommandData(CommandData* cData) {
+    printf("---------------[ Command ]---------------\n");
+    printf("command: %s\n", cData->command);
+    printf("args: [");
+    for(int i = 0; i < cData->argc-1; i++) {
+        printf("%s, ", cData->argv[i]);
+    }
+    printf("%s ]\n", cData->argv[cData->argc-1]);
+    printf("-----------------------------------------\n");
 }
 
 void vsh_mainLoop() {
@@ -61,10 +73,13 @@ void vsh_mainLoop() {
         if (isDebugCommand(command)) {
             bolsonaro();
         }
-        printf("got command %s\n", command);
         CommandData commandData;
         commandData.command = command;
-        commandData.args = NULL;
+        char* a[1];
+        a[0] = "";
+        commandData.argv = a;
+        commandData.argc = 1;
+        printCreatedCommandData(&commandData);
         execForegroundCommand(&commandData);
     }
 }
@@ -78,7 +93,7 @@ int execForegroundCommand(CommandData* command) {
     }
     int wstatus;
     if (utils_isChildProcess(pid)) {
-        char** param = command->args;
+        char** param = command->argv;
         int execStat = execvp(command->command, &command->command);
         if (execStat < 0) {
             printf("Erro executando comando %s\n", command);

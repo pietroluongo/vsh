@@ -5,7 +5,8 @@
 
 typedef struct commandData {
     char* command;
-    char** args;
+    char** argv;
+    int argc;
 }CommandData;
 
 void vsh_mainLoop();
