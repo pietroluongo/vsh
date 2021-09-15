@@ -15,6 +15,7 @@
 // Auxiliary internal functions
 int isExitCommand(char* command);
 int isDebugCommand(char* command);
+void showProcessExitStatus(int* status, pid_t childPid);
 void bolsonaro();
 
 void bolsonaro() {
@@ -36,6 +37,17 @@ void bolsonaro() {
 int isExitCommand(char* command) { return !strcmp(command, "exit"); }
 
 int isDebugCommand(char* command) { return !strcmp(command, "debug"); }
+
+void showProcessExitStatus(int* wstatus, pid_t childPid) {
+    if (WIFEXITED(wstatus)) {
+        printf("[Shell] Process %ld exited with code %d\n", childPid,
+               WEXITSTATUS(wstatus));
+    }
+    if (WIFSIGNALED(wstatus)) {
+        printf("[Shell] Process %ld signaled with code %ld\n", childPid,
+               WTERMSIG(wstatus));
+    }
+}
 
 void vsh_mainLoop() {
     for (EVER) {
@@ -74,13 +86,6 @@ int execForegroundCommand(CommandData* command) {
         }
     } else {
         waitpid(pid, &wstatus, 0);
-        if (WIFEXITED(wstatus)) {
-            printf("[Shell] Process %ld exited with code %d\n", pid,
-                   WEXITSTATUS(wstatus));
-        }
-        if (WIFSIGNALED(wstatus)) {
-            printf("[Shell] Process %ld signaled with code %ld\n", pid,
-                   WTERMSIG(wstatus));
-        }
+        showProcessExitStatus(wstatus, pid);
     }
 }
