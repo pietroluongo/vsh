@@ -73,20 +73,31 @@ void printCreatedCommandData(CommandData* cData) {
     printf("-----------------------------------------\n");
 }
 
+void buildCommandForProgramFromString(char* command, CommandData* commandData) {
+    char** argv = malloc(MAX_COMMAND_ARGS * sizeof(char*));
+    char* separatedArgsEnd;
+    char* separatedArgs = strtok_r(command, " ", &separatedArgsEnd);
+    int it = 0;
+    while(separatedArgs) {
+        argv[it++] = separatedArgs;
+        separatedArgs = strtok_r(NULL, " ", &separatedArgsEnd);
+    }
+    commandData->argv = argv;
+    commandData->argc = it;
+    printCreatedCommandData(commandData);
+}
+
 CommandDataArray* buildCommandStructsFromLine(char* line) {
     CommandDataArray* arr = malloc(sizeof(CommandDataArray));
     CommandData* commands = malloc(MAX_COMMANDS_PER_LINE * sizeof(CommandData));
-    int iterator = 0;
-    char* separatedCommands = strtok(line, "|");
+    char* separatedCommandsEnd;
+    char* separatedCommands = strtok_r(line, "|", &separatedCommandsEnd);
+    int it = 0;
     while (separatedCommands) {
-        printf("Separated command: %s\n", separatedCommands);
-        char* separatedArgs = strtok(line, " ");
-        char iterator2 = 0;
-        while (separatedArgs) {
-        }
-        separatedCommands = strtok(NULL, "|");
+        buildCommandForProgramFromString(separatedCommands, &commands[it++]);
+        separatedCommands = strtok_r(NULL, "|", &separatedCommandsEnd);
     }
-    arr->size = 0;
+    arr->size = it;
     arr->data = commands;
     return arr;
 }
@@ -106,31 +117,25 @@ void vsh_mainLoop() {
     for (EVER) {
         printPromptHeader();
         char command[MAX_COMMAND_SIZE];
-        readCommandFromStdin(command);
-        CommandDataArray* parsedCommandList = buildCommandStructsFromLine(command);
-        CommandData* parsedCommands = parsedCommandList->data;
         if (isExitCommand(command)) {
             break;
         }
         if (isDebugCommand(command)) {
             bolsonaro();
+            continue;
         }
-        char** argv = malloc(1 * sizeof(char*));
-        argv[0] = command;
-        CommandData commandData;
-        commandData.argv = argv;
-        commandData.argc = 1;
-        printCreatedCommandData(&commandData);
-        execForegroundCommand(&commandData);
-        free(argv);
+        readCommandFromStdin(command);
+        CommandDataArray* parsedCommandList = buildCommandStructsFromLine(command);
+        CommandData* parsedCommands = parsedCommandList->data;
+        execForegroundCommand(&parsedCommands[0]);
         freeCommandDataArray(parsedCommandList);
     }
 }
 
 void freeCommandDataArray(CommandDataArray * commandData) {
-    //    for(int i = 0; i < commandData->size; i++) {
-    //        free(commandData->data[i]);
-    //    }
+    for(int i = 0; i < commandData->size; i++) {
+        free(commandData->data[i].argv);
+    }
     free(commandData->data);
     free(commandData);
 }

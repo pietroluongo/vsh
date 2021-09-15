@@ -45,3 +45,6 @@ mkBuildDir:
 	@if [ ! -d "./build/" ]; then \
 		mkdir build; \
 	fi
+
+run:
+	./vsh
