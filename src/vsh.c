@@ -18,6 +18,7 @@ int isDebugCommand(char* command);
 void showProcessExitStatus(int status, pid_t childPid);
 void printCreatedCommandData(CommandData* cData);
 void readCommandFromStdin(char* whereToStore);
+char* getCommandProgram(CommandData* command);
 void printPromptHeader();
 void bolsonaro();
 
@@ -52,14 +53,16 @@ void showProcessExitStatus(int wstatus, pid_t childPid) {
     }
 }
 
+char* getCommandProgram(CommandData* command) { return command->argv[0]; }
+
 void printCreatedCommandData(CommandData* cData) {
     printf("---------------[ Command ]---------------\n");
-    printf("command: %s\n", cData->command);
-    printf("args: [");
-    for(int i = 0; i < cData->argc-1; i++) {
+    printf("program: %s\n", getCommandProgram(cData));
+    printf("args: [ ");
+    for (int i = 0; i < cData->argc - 1; i++) {
         printf("%s, ", cData->argv[i]);
     }
-    printf("%s ]\n", cData->argv[cData->argc-1]);
+    printf("%s ]\n", cData->argv[cData->argc - 1]);
     printf("-----------------------------------------\n");
 }
 
@@ -68,9 +71,11 @@ void readCommandFromStdin(char* whereToStore) {
     utils_rtrim(whereToStore);
 }
 
-void printPromptHeader() {
-    printf("vsh> ");
-}
+void printPromptHeader() { printf("vsh> "); }
+
+// Linha: Array<CommandData>
+// ls | grep "pastel"
+// [{command: "ls", argv: ["ls"], argc: 1}, {command: "grep", }]
 
 void vsh_mainLoop() {
     for (EVER) {
@@ -83,14 +88,14 @@ void vsh_mainLoop() {
         if (isDebugCommand(command)) {
             bolsonaro();
         }
+        char** argv = malloc(1 * sizeof(char*));
+        argv[0] = command;
         CommandData commandData;
-        commandData.command = command;
-        char* a[1];
-        a[0] = "";
-        commandData.argv = a;
+        commandData.argv = argv;
         commandData.argc = 1;
         printCreatedCommandData(&commandData);
         execForegroundCommand(&commandData);
+        free(argv);
     }
 }
 
@@ -104,7 +109,7 @@ int execForegroundCommand(CommandData* command) {
     int wstatus;
     if (utils_isChildProcess(pid)) {
         char** param = command->argv;
-        int execStat = execvp(command->command, &command->command);
+        int execStat = execvp(getCommandProgram(command), command->argv);
         if (execStat < 0) {
             printf("Erro executando comando %s\n", command);
             exit(1);
