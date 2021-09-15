@@ -17,6 +17,8 @@ int isExitCommand(char* command);
 int isDebugCommand(char* command);
 void showProcessExitStatus(int status, pid_t childPid);
 void printCreatedCommandData(CommandData* cData);
+void readCommandFromStdin(char* whereToStore);
+void printPromptHeader();
 void bolsonaro();
 
 void bolsonaro() {
@@ -61,12 +63,20 @@ void printCreatedCommandData(CommandData* cData) {
     printf("-----------------------------------------\n");
 }
 
+void readCommandFromStdin(char* whereToStore) {
+    fgets(whereToStore, MAX_COMMAND_SIZE, stdin);
+    utils_rtrim(whereToStore);
+}
+
+void printPromptHeader() {
+    printf("vsh> ");
+}
+
 void vsh_mainLoop() {
     for (EVER) {
-        printf("vsh> ");
+        printPromptHeader();
         char command[MAX_COMMAND_SIZE];
-        fgets(command, MAX_COMMAND_SIZE, stdin);
-        utils_rtrim(command);
+        readCommandFromStdin(command);
         if (isExitCommand(command)) {
             break;
         }
