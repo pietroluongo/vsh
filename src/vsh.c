@@ -117,6 +117,7 @@ void vsh_mainLoop() {
     for (EVER) {
         printPromptHeader();
         char command[MAX_COMMAND_SIZE];
+        readCommandFromStdin(command);
         if (isExitCommand(command)) {
             break;
         }
@@ -124,7 +125,6 @@ void vsh_mainLoop() {
             bolsonaro();
             continue;
         }
-        readCommandFromStdin(command);
         CommandDataArray* parsedCommandList = buildCommandStructsFromLine(command);
         CommandData* parsedCommands = parsedCommandList->data;
         execForegroundCommand(&parsedCommands[0]);
