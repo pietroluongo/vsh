@@ -3,6 +3,6 @@
 #include <unistd.h>
 
 void utils_rtrim(char* str);
-int utils_isChildProcess(pid_t pid);
+int  utils_isChildProcess(pid_t pid);
 
 #endif // VSH_UTILS_H

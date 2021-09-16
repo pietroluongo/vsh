@@ -20,7 +20,6 @@ void              printCreatedCommandData(CommandData* cData);
 CommandDataArray* buildCommandStructsFromLine(char* line);
 char*             getCommandProgram(CommandData* command);
 void              freeCommandDataArray(CommandDataArray* commandData);
-void              buildCommandForProgramFromString(char*        command,
-                                                          CommandData* commandData);
+void buildCommandForProgramFromString(char* command, CommandData* commandData);
 
 #endif // VSH_COMMAND_H
