@@ -12,11 +12,6 @@
 #define EVER ;;
 // clang-format on
 
-typedef struct commandDataArray {
-    CommandData* data;
-    ssize_t size;
-}CommandDataArray;
-
 // Auxiliary internal functions
 int isExitCommand(char* command);
 int isDebugCommand(char* command);
@@ -51,11 +46,11 @@ int isDebugCommand(char* command) { return !strcmp(command, "debug"); }
 
 void showProcessExitStatus(int wstatus, pid_t childPid) {
     if (WIFEXITED(wstatus)) {
-        printf("[Shell] Process %ld exited with code %d\n", childPid,
+        printf("[Shell] Process %d exited with code %d\n", (int)childPid,
                WEXITSTATUS(wstatus));
     }
     if (WIFSIGNALED(wstatus)) {
-        printf("[Shell] Process %ld signaled with code %ld\n", childPid,
+        printf("[Shell] Process %d signaled with code %d\n", (int)childPid,
                WTERMSIG(wstatus));
     }
 }
@@ -78,7 +73,7 @@ void buildCommandForProgramFromString(char* command, CommandData* commandData) {
     char* separatedArgsEnd;
     char* separatedArgs = strtok_r(command, " ", &separatedArgsEnd);
     int it = 0;
-    while(separatedArgs) {
+    while (separatedArgs) {
         argv[it++] = separatedArgs;
         separatedArgs = strtok_r(NULL, " ", &separatedArgsEnd);
     }
@@ -125,15 +120,22 @@ void vsh_mainLoop() {
             bolsonaro();
             continue;
         }
-        CommandDataArray* parsedCommandList = buildCommandStructsFromLine(command);
+        CommandDataArray* parsedCommandList =
+            buildCommandStructsFromLine(command);
         CommandData* parsedCommands = parsedCommandList->data;
-        execForegroundCommand(&parsedCommands[0]);
+        if (parsedCommandList->size == 0) {
+            continue;
+        } else if (parsedCommandList->size == 1) {
+            execForegroundCommand(&parsedCommands[0]);
+        } else {
+            execBackgroundCommands(parsedCommandList);
+        }
         freeCommandDataArray(parsedCommandList);
     }
 }
 
-void freeCommandDataArray(CommandDataArray * commandData) {
-    for(int i = 0; i < commandData->size; i++) {
+void freeCommandDataArray(CommandDataArray* commandData) {
+    for (int i = 0; i < commandData->size; i++) {
         free(commandData->data[i].argv);
     }
     free(commandData->data);
@@ -149,14 +151,17 @@ int execForegroundCommand(CommandData* command) {
     }
     int wstatus;
     if (utils_isChildProcess(pid)) {
-        char** param = command->argv;
         int execStat = execvp(getCommandProgram(command), command->argv);
         if (execStat < 0) {
-            printf("Erro executando comando %s\n", command);
+            printf("Erro executando comando %s\n", getCommandProgram(command));
             exit(1);
         }
     } else {
         waitpid(pid, &wstatus, 0);
         showProcessExitStatus(wstatus, pid);
     }
+}
+
+int execBackgroundCommands(CommandDataArray* commandList) {
+    printf("TODO: implement execBackgroundCommand()\n");
 }
