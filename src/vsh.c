@@ -1,15 +1,15 @@
 #include "../include/vsh.h"
 
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include "../include/utils.h"
 #include "./_vsh.h"
 
-void bolsonaro() {
+void printAlligator() {
     for (int i = 0; i < VSH_ALLIGATOR_SIZE; i++) {
         printf("%s", vaccinatedGuy[i]);
     }
@@ -75,6 +75,14 @@ void readCommandFromStdin(char* whereToStore) {
 
 void printPromptHeader() { printf("vsh> "); }
 
+void handleProcessClear() {
+    printf("[Shell] TODO: implement process clearing logic\n");
+}
+
+void handleProcessNuke() {
+    printf("[Shell] TODO: implement process nuking logic\n");
+}
+
 void vsh_mainLoop() {
     for (EVER) {
         printPromptHeader();
@@ -82,10 +90,13 @@ void vsh_mainLoop() {
         readCommandFromStdin(command);
         if (isExitCommand(command)) {
             break;
-        }
-        if (isDebugCommand(command)) {
-            bolsonaro();
+        } else if (isDebugCommand(command)) {
+            printAlligator();
             continue;
+        } else if (isClearCommand(command)) {
+            handleProcessClear();
+        } else if (isNukeCommand(command)) {
+            handleProcessNuke();
         }
         CommandDataArray* parsedCommandList =
             buildCommandStructsFromLine(command);

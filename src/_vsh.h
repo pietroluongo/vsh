@@ -4,6 +4,8 @@
 
 #define VSH_EXIT_COMMAND  "exit"
 #define VSH_DEBUG_COMMAND "debug"
+#define VSH_CLEAR_COMMAND "liberamoita"
+#define VSH_NUKE_COMMAND  "armageddon"
 
 // clang-format off
 #define EVER ;;
@@ -40,6 +42,14 @@ static int isDebugCommand(char* command) {
     return !strcmp(command, VSH_DEBUG_COMMAND);
 }
 
+static int isClearCommand(char* command) {
+    return !strcmp(command, VSH_CLEAR_COMMAND);
+}
+
+static int isNukeCommand(char* command) {
+    return !strcmp(command, VSH_NUKE_COMMAND);
+}
+
 static void              showProcessExitStatus(int status, pid_t childPid);
 static void              printCreatedCommandData(CommandData* cData);
 static void              readCommandFromStdin(char* whereToStore);
@@ -47,10 +57,12 @@ static char*             getCommandProgram(CommandData* command);
 static CommandDataArray* buildCommandStructsFromLine(char* line);
 static void              freeCommandDataArray(CommandDataArray* commandData);
 static void              printPromptHeader();
-static void              bolsonaro();
+static void              printAlligator();
 static void              buildCommandForProgramFromString(char*        command,
                                                           CommandData* commandData);
 static int               execForegroundCommand(CommandData* command);
 static int               execBackgroundCommands(CommandDataArray* commandList);
+static void              handleProcessClear();
+static void              handleProcessNuke();
 
 #endif
