@@ -1,6 +1,7 @@
 #ifndef _VSH_H
 #define _VSH_H
 #include "../include/vsh.h"
+#include <signal.h>
 
 #define VSH_EXIT_COMMAND  "exit"
 #define VSH_DEBUG_COMMAND "debug"
@@ -48,5 +49,6 @@ static int  execForegroundCommand(CommandData* command);
 static int  execBackgroundCommands(CommandDataArray* commandList);
 static void handleProcessClear();
 static void handleProcessNuke();
+void        setBlockedSignals(sigset_t* mask);
 
 #endif

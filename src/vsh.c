@@ -6,8 +6,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "../include/utils.h"
 #include "../include/command.h"
+#include "../include/utils.h"
 #include "./_vsh.h"
 
 void printAlligator() {
@@ -97,3 +97,18 @@ int execBackgroundCommands(CommandDataArray* commandList) {
     printf("TODO: implement execBackgroundCommand()\n");
 }
 
+void setBlockedSignals(sigset_t* mask) {
+    sigaddset(mask, SIGINT);
+    sigaddset(mask, SIGSTOP);
+    sigaddset(mask, SIGQUIT);
+    int result = sigprocmask(SIG_SETMASK, mask, NULL);
+    if (result == -1) {
+        printf("Erro ao configurar mascara de processos.\n");
+        exit(1);
+    }
+}
+
+void vsh_setupInitialSignals() {
+    sigset_t blockedSignals;
+    setBlockedSignals(&blockedSignals);
+}
