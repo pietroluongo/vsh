@@ -1,48 +1,19 @@
 #include "../include/vsh.h"
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include "../include/utils.h"
-
-// clang-format off
-#define EVER ;;
-// clang-format on
-
-// Auxiliary internal functions
-int isExitCommand(char* command);
-int isDebugCommand(char* command);
-void showProcessExitStatus(int status, pid_t childPid);
-void printCreatedCommandData(CommandData* cData);
-void readCommandFromStdin(char* whereToStore);
-char* getCommandProgram(CommandData* command);
-CommandDataArray* buildCommandStructsFromLine(char* line);
-void freeCommandDataArray(CommandDataArray* commandData);
-void printPromptHeader();
-void bolsonaro();
+#include "./_vsh.h"
 
 void bolsonaro() {
-    char* vaccinatedGuy[] = {
-        "\n",
-        "                  _  _\n",
-        "        _ _      (0)(0)-._  _.-'^^'^^'^^'^^'^^'--.\n",
-        "       (.(.)----'`        ^^'                /^   ^^-._\n",
-        "       (    `                 \\             |    _    ^^-._\n",
-        "        VvvvvvvVv~~`__,/.._>  /:/:/:/:/:/:/:/\\  (_..,______^^-.\n",
-        "         `^^^^^^^^`/  /   /  /`^^^^^^^^^>^^>^`>  >        _`)  )\n",
-        "                   (((`   (((`          (((`  (((`        `'--'^\n",
-        "   I feel weird...\n"};
-    for (int i = 0; i < 9; i++) {
+    for (int i = 0; i < VSH_ALLIGATOR_SIZE; i++) {
         printf("%s", vaccinatedGuy[i]);
     }
 }
-
-int isExitCommand(char* command) { return !strcmp(command, "exit"); }
-
-int isDebugCommand(char* command) { return !strcmp(command, "debug"); }
 
 void showProcessExitStatus(int wstatus, pid_t childPid) {
     if (WIFEXITED(wstatus)) {
@@ -70,9 +41,9 @@ void printCreatedCommandData(CommandData* cData) {
 
 void buildCommandForProgramFromString(char* command, CommandData* commandData) {
     char** argv = malloc(MAX_COMMAND_ARGS * sizeof(char*));
-    char* separatedArgsEnd;
-    char* separatedArgs = strtok_r(command, " ", &separatedArgsEnd);
-    int it = 0;
+    char*  separatedArgsEnd;
+    char*  separatedArgs = strtok_r(command, " ", &separatedArgsEnd);
+    int    it = 0;
     while (separatedArgs) {
         argv[it++] = separatedArgs;
         separatedArgs = strtok_r(NULL, " ", &separatedArgsEnd);
@@ -85,9 +56,9 @@ void buildCommandForProgramFromString(char* command, CommandData* commandData) {
 CommandDataArray* buildCommandStructsFromLine(char* line) {
     CommandDataArray* arr = malloc(sizeof(CommandDataArray));
     CommandData* commands = malloc(MAX_COMMANDS_PER_LINE * sizeof(CommandData));
-    char* separatedCommandsEnd;
-    char* separatedCommands = strtok_r(line, "|", &separatedCommandsEnd);
-    int it = 0;
+    char*        separatedCommandsEnd;
+    char*        separatedCommands = strtok_r(line, "|", &separatedCommandsEnd);
+    int          it = 0;
     while (separatedCommands) {
         buildCommandForProgramFromString(separatedCommands, &commands[it++]);
         separatedCommands = strtok_r(NULL, "|", &separatedCommandsEnd);
@@ -103,10 +74,6 @@ void readCommandFromStdin(char* whereToStore) {
 }
 
 void printPromptHeader() { printf("vsh> "); }
-
-// Linha: Array<CommandData>
-// ls | grep "pastel"
-// [{command: "ls", argv: ["ls"], argc: 1}, {command: "grep", }]
 
 void vsh_mainLoop() {
     for (EVER) {

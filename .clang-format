@@ -4,3 +4,4 @@ DerivePointerAlignment: false
 PointerAlignment: Left
 IncludeBlocks: Preserve
 AlignConsecutiveMacros: Consecutive
+AlignConsecutiveDeclarations: Consecutive
