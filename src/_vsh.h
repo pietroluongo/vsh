@@ -24,16 +24,6 @@ static const char* vaccinatedGuy[] = {
     "                   (((`   (((`          (((`  (((`        `'--'^\n",
     "   I feel weird...\n"};
 
-typedef struct commandData {
-    char** argv;
-    int    argc;
-} CommandData;
-
-typedef struct commandDataArray {
-    CommandData* data;
-    ssize_t      size;
-} CommandDataArray;
-
 // Auxiliary internal functions
 static int isExitCommand(char* command) {
     return !strcmp(command, VSH_EXIT_COMMAND);
@@ -50,19 +40,13 @@ static int isNukeCommand(char* command) {
     return !strcmp(command, VSH_NUKE_COMMAND);
 }
 
-static void              showProcessExitStatus(int status, pid_t childPid);
-static void              printCreatedCommandData(CommandData* cData);
-static void              readCommandFromStdin(char* whereToStore);
-static char*             getCommandProgram(CommandData* command);
-static CommandDataArray* buildCommandStructsFromLine(char* line);
-static void              freeCommandDataArray(CommandDataArray* commandData);
-static void              printPromptHeader();
-static void              printAlligator();
-static void              buildCommandForProgramFromString(char*        command,
-                                                          CommandData* commandData);
-static int               execForegroundCommand(CommandData* command);
-static int               execBackgroundCommands(CommandDataArray* commandList);
-static void              handleProcessClear();
-static void              handleProcessNuke();
+static void showProcessExitStatus(int status, pid_t childPid);
+static void readCommandFromStdin(char* whereToStore);
+static void printPromptHeader();
+static void printAlligator();
+static int  execForegroundCommand(CommandData* command);
+static int  execBackgroundCommands(CommandDataArray* commandList);
+static void handleProcessClear();
+static void handleProcessNuke();
 
 #endif
