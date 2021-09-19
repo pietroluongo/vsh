@@ -14,7 +14,7 @@ void printCreatedCommandData(CommandData* cData) {
 }
 
 void buildCommandForProgramFromString(char* command, CommandData* commandData) {
-    char** argv = malloc(MAX_COMMAND_ARGS * sizeof(char*));
+    char** argv = malloc((MAX_COMMAND_ARGS * sizeof(char*)) + 1);
     char*  separatedArgsEnd;
     char*  separatedArgs = strtok_r(command, " ", &separatedArgsEnd);
     int    it = 0;
