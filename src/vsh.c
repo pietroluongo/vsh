@@ -19,6 +19,13 @@ void printAlligator() {
     }
 }
 
+void checkForkError(pid_t pid) {
+    if(pid == -1) {
+        printf("Error: fork failed!\n");
+        exit(1);
+    }
+}
+
 void showProcessExitStatus(int wstatus, pid_t childPid) {
     if (WIFEXITED(wstatus)) {
         printf("[Shell] Process %d exited with code %d\n", (int)childPid,
@@ -85,8 +92,8 @@ int execForegroundCommand(CommandData* command) {
     }
     int wstatus;
     if (utils_isChildProcess(pid)) {
-        int execStat = execvp(getCommandProgram(command), command->argv);
-        if (execStat < 0) {
+        int execStatus = execvp(getCommandProgram(command), command->argv);
+        if (execStatus < 0) {
             printf("Erro executando comando %s\n", getCommandProgram(command));
             exit(1);
         }
@@ -99,17 +106,14 @@ int execForegroundCommand(CommandData* command) {
 int execBackgroundCommands(CommandDataArray* commandList) {
     int   nCommands = (int)commandList->size;
     pid_t pid[nCommands];
-    int   execStat[nCommands];
+    int   execStatus[nCommands];
     int   nPipes = nCommands - 1;
-    int   fd[nPipes][2];
+    int   pipeDescriptors[nPipes][2];
 
     for (int i = 0; i < nPipes; i++) {
-        if (pipe(fd[i]) < 0) {
+        if (pipe(pipeDescriptors[i]) < 0) {
             printf("ERROR creating pipe with index %d\n", i);
-            for (int j = 0; j < i; j++) {
-                close(fd[j][READ]);
-                close(fd[j][WRITE]);
-            }
+            utils_closeAllPipes(pipeDescriptors, i);
             exit(1);
         }
     }
@@ -117,28 +121,25 @@ int execBackgroundCommands(CommandDataArray* commandList) {
     for (int i = 0; i < nCommands; i++) {
         CommandData* command = &commandList->data[i];
         pid[i] = fork();
-        if (pid[i] == -1) {
-            printf("ERROR forking with index %d\n", i);
-            exit(1);
-        }
+        checkForkError(pid[i]);
         int wstatus;
         if (utils_isChildProcess(pid[i])) {
             if (i == 0) {
                 // first process needs to stdout to the first pipe
-                dup2(fd[i][WRITE], STDOUT_FILENO);
-                utils_closeAllPipes(fd, nPipes);
-                execStat[i] = execvp(getCommandProgram(command), command->argv);
-                if (execStat < 0) {
+                dup2(pipeDescriptors[i][WRITE], STDOUT_FILENO);
+                utils_closeAllPipes(pipeDescriptors, nPipes);
+                execStatus[i] = execvp(getCommandProgram(command), command->argv);
+                if (execStatus < 0) {
                     printf("Erro executando comando %s\n",
                            getCommandProgram(command));
                     exit(1);
                 }
             } else if (i == nCommands - 1) {
                 // end process needs to stdin from previous pipe
-                dup2(fd[i - 1][READ], STDIN_FILENO);
-                utils_closeAllPipes(fd, nPipes);
-                execStat[i] = execvp(getCommandProgram(command), command->argv);
-                if (execStat < 0) {
+                dup2(pipeDescriptors[i - 1][READ], STDIN_FILENO);
+                utils_closeAllPipes(pipeDescriptors, nPipes);
+                execStatus[i] = execvp(getCommandProgram(command), command->argv);
+                if (execStatus < 0) {
                     printf("Erro executando comando %s\n",
                            getCommandProgram(command));
                     exit(1);
@@ -146,11 +147,11 @@ int execBackgroundCommands(CommandDataArray* commandList) {
             } else {
                 /* middle processes need to stdin from previous pipe
                  * and stdout to current pipe */
-                dup2(fd[i - 1][READ], STDIN_FILENO);
-                dup2(fd[i][WRITE], STDOUT_FILENO);
-                utils_closeAllPipes(fd, nPipes);
-                execStat[i] = execvp(getCommandProgram(command), command->argv);
-                if (execStat < 0) {
+                dup2(pipeDescriptors[i - 1][READ], STDIN_FILENO);
+                dup2(pipeDescriptors[i][WRITE], STDOUT_FILENO);
+                utils_closeAllPipes(pipeDescriptors, nPipes);
+                execStatus[i] = execvp(getCommandProgram(command), command->argv);
+                if (execStatus < 0) {
                     printf("Erro executando comando %s\n",
                            getCommandProgram(command));
                     exit(1);
@@ -160,11 +161,11 @@ int execBackgroundCommands(CommandDataArray* commandList) {
             exit(0);
         } else {
             if (i > 0) {
-                if (close(fd[i - 1][READ])) {
+                if (close(pipeDescriptors[i - 1][READ])) {
                     printf("error closing pipe %d %d\n", i - 1, 0);
                     exit(1);
                 }
-                if (close(fd[i - 1][WRITE])) {
+                if (close(pipeDescriptors[i - 1][WRITE])) {
                     printf("error closing pipe %d %d\n", i - 1, 0);
                     exit(1);
                 }
