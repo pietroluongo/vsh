@@ -121,7 +121,7 @@ int execBackgroundCommands(CommandDataArray* commandList) {
                 dup2(pipeDescriptors[i][WRITE], STDOUT_FILENO);
             } else if (i == nCommands - 1) {
                 // end process needs to stdin from previous pipe
-                cmd_checkStatus(execStatus[i], cmd_getCommandProgram(command));
+                dup2(pipeDescriptors[i - 1][READ], STDIN_FILENO);
             } else {
                 /* middle processes need to stdin from previous pipe
                  * and stdout to current pipe */
