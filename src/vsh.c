@@ -37,7 +37,21 @@ void readCommandFromStdin(char* whereToStore) {
 void printPromptHeader() { printf("vsh> "); }
 
 void handleProcessClear() {
-    printf("[Shell] TODO: implement process clearing logic\n");
+    FILE* fp;
+    char path[1024];
+    snprintf(path, 1024, "/usr/bin/pgrep -P %d -r Z", getpid());
+    fp = popen(path, "r");
+
+    if (fp == NULL) {
+        printf("ERROR opening popen\n");
+        exit(1);
+    }
+
+    while(fgets(path, sizeof(path), fp) != NULL) {
+        int pid = atoi(path);
+        waitpid((pid_t)pid, NULL, 0);
+    }
+    fclose(fp);
 }
 
 void handleProcessNuke() {
@@ -58,18 +72,19 @@ void vsh_mainLoop() {
             handleProcessClear();
         } else if (isNukeCommand(command)) {
             handleProcessNuke();
-        }
-        CommandDataArray* parsedCommandList =
-            buildCommandStructsFromLine(command);
-        CommandData* parsedCommands = parsedCommandList->data;
-        if (parsedCommandList->size == 0) {
-            continue;
-        } else if (parsedCommandList->size == 1) {
-            execForegroundCommand(&parsedCommands[0]);
         } else {
-            execBackgroundCommands(parsedCommandList);
+            CommandDataArray* parsedCommandList =
+                buildCommandStructsFromLine(command);
+            CommandData* parsedCommands = parsedCommandList->data;
+            if (parsedCommandList->size == 0) {
+                continue;
+            } else if (parsedCommandList->size == 1) {
+                execForegroundCommand(&parsedCommands[0]);
+            } else {
+                execBackgroundCommands(parsedCommandList);
+            }
+            freeCommandDataArray(parsedCommandList);
         }
-        freeCommandDataArray(parsedCommandList);
     }
 }
 
@@ -170,8 +185,8 @@ int execBackgroundCommands(CommandDataArray* commandList) {
                     exit(1);
                 }
             }
-            waitpid(pid[i], &wstatus, 0);
-            showProcessExitStatus(wstatus, pid[i]);
+            // waitpid(pid[i], &wstatus, 0);
+            // showProcessExitStatus(wstatus, pid[i]);
         }
     }
     printf("Finished executing background commands\n");
