@@ -10,6 +10,9 @@
 #include "../include/utils.h"
 #include "./_vsh.h"
 
+#define READ  0
+#define WRITE 1
+
 void printAlligator() {
     for (int i = 0; i < VSH_ALLIGATOR_SIZE; i++) {
         printf("%s", vaccinatedGuy[i]);
@@ -93,13 +96,6 @@ int execForegroundCommand(CommandData* command) {
     }
 }
 
-void closeAllUnusedPipes(int (*fd)[2], int nPipes) {
-    for (int i = 0; i < nPipes; i++) {
-        close(fd[i][0]);
-        close(fd[i][1]);
-    }
-}
-
 int execBackgroundCommands(CommandDataArray* commandList) {
     int   nCommands = (int)commandList->size;
     pid_t pid[nCommands];
@@ -111,8 +107,8 @@ int execBackgroundCommands(CommandDataArray* commandList) {
         if (pipe(fd[i]) < 0) {
             printf("ERROR creating pipe with index %d\n", i);
             for (int j = 0; j < i; j++) {
-                close(fd[j][0]);
-                close(fd[j][1]);
+                close(fd[j][READ]);
+                close(fd[j][WRITE]);
             }
             exit(1);
         }
@@ -130,7 +126,7 @@ int execBackgroundCommands(CommandDataArray* commandList) {
             if (i == 0) {
                 // first process needs to stdout to the first pipe
                 dup2(fd[i][1], STDOUT_FILENO);
-                closeAllUnusedPipes(fd, nPipes);
+                utils_closeAllPipes(fd, nPipes);
                 execStat[i] = execvp(getCommandProgram(command), command->argv);
                 if (execStat < 0) {
                     printf("Erro executando comando %s\n",
@@ -140,7 +136,7 @@ int execBackgroundCommands(CommandDataArray* commandList) {
             } else if (i == nCommands - 1) {
                 // end process needs to stdin from previous pipe
                 dup2(fd[i - 1][0], STDIN_FILENO);
-                closeAllUnusedPipes(fd, nPipes);
+                utils_closeAllPipes(fd, nPipes);
                 execStat[i] = execvp(getCommandProgram(command), command->argv);
                 if (execStat < 0) {
                     printf("Erro executando comando %s\n",
@@ -152,7 +148,7 @@ int execBackgroundCommands(CommandDataArray* commandList) {
                  * and stdout to current pipe */
                 dup2(fd[i - 1][0], STDIN_FILENO);
                 dup2(fd[i][1], STDOUT_FILENO);
-                closeAllUnusedPipes(fd, nPipes);
+                utils_closeAllPipes(fd, nPipes);
                 execStat[i] = execvp(getCommandProgram(command), command->argv);
                 if (execStat < 0) {
                     printf("Erro executando comando %s\n",
