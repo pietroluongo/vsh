@@ -20,7 +20,7 @@ void printAlligator() {
 }
 
 void checkForkError(pid_t pid) {
-    if(pid == -1) {
+    if (pid == -1) {
         printf("Error: fork failed!\n");
         exit(1);
     }
@@ -70,7 +70,7 @@ void vsh_mainLoop() {
             handleProcessNuke();
         }
         CommandDataArray* parsedCommandList =
-            buildCommandStructsFromLine(command);
+            cmd_buildCommandStructsFromLine(command);
         CommandData* parsedCommands = parsedCommandList->data;
         if (parsedCommandList->size == 0) {
             continue;
@@ -79,7 +79,7 @@ void vsh_mainLoop() {
         } else {
             execBackgroundCommands(parsedCommandList);
         }
-        freeCommandDataArray(parsedCommandList);
+        cmd_freeCommandDataArray(parsedCommandList);
     }
 }
 
@@ -128,7 +128,8 @@ int execBackgroundCommands(CommandDataArray* commandList) {
                 // first process needs to stdout to the first pipe
                 dup2(pipeDescriptors[i][WRITE], STDOUT_FILENO);
                 utils_closeAllPipes(pipeDescriptors, nPipes);
-                execStatus[i] = execvp(getCommandProgram(command), command->argv);
+                execStatus[i] =
+                    execvp(getCommandProgram(command), command->argv);
                 if (execStatus < 0) {
                     printf("Erro executando comando %s\n",
                            getCommandProgram(command));
@@ -138,7 +139,8 @@ int execBackgroundCommands(CommandDataArray* commandList) {
                 // end process needs to stdin from previous pipe
                 dup2(pipeDescriptors[i - 1][READ], STDIN_FILENO);
                 utils_closeAllPipes(pipeDescriptors, nPipes);
-                execStatus[i] = execvp(getCommandProgram(command), command->argv);
+                execStatus[i] =
+                    execvp(getCommandProgram(command), command->argv);
                 if (execStatus < 0) {
                     printf("Erro executando comando %s\n",
                            getCommandProgram(command));
@@ -150,14 +152,15 @@ int execBackgroundCommands(CommandDataArray* commandList) {
                 dup2(pipeDescriptors[i - 1][READ], STDIN_FILENO);
                 dup2(pipeDescriptors[i][WRITE], STDOUT_FILENO);
                 utils_closeAllPipes(pipeDescriptors, nPipes);
-                execStatus[i] = execvp(getCommandProgram(command), command->argv);
+                execStatus[i] =
+                    execvp(getCommandProgram(command), command->argv);
                 if (execStatus < 0) {
                     printf("Erro executando comando %s\n",
                            getCommandProgram(command));
                     exit(1);
                 }
             }
-            freeCommandDataArray(commandList);
+            cmd_freeCommandDataArray(commandList);
             exit(0);
         } else {
             if (i > 0) {

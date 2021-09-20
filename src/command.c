@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 
-void printCreatedCommandData(CommandData* cData) {
+void cmd_printCreatedCommandData(CommandData* cData) {
     printf("---------------[ Command ]---------------\n");
-    printf("program: %s\n", getCommandProgram(cData));
+    printf("program: %s\n", cmd_getCommandProgram(cData));
     printf("args: [ ");
     for (int i = 0; i < cData->argc - 1; i++) {
         printf("%s, ", cData->argv[i]);
@@ -13,7 +13,8 @@ void printCreatedCommandData(CommandData* cData) {
     printf("-----------------------------------------\n");
 }
 
-void buildCommandForProgramFromString(char* command, CommandData* commandData) {
+void cmd_buildCommandForProgramFromString(char*        command,
+                                          CommandData* commandData) {
     char** argv = malloc((MAX_COMMAND_ARGS * sizeof(char*)) + 1);
     char*  separatedArgsEnd;
     char*  separatedArgs = strtok_r(command, " ", &separatedArgsEnd);
@@ -24,17 +25,18 @@ void buildCommandForProgramFromString(char* command, CommandData* commandData) {
     }
     commandData->argv = argv;
     commandData->argc = it;
-    printCreatedCommandData(commandData);
+    cmd_printCreatedCommandData(commandData);
 }
 
-CommandDataArray* buildCommandStructsFromLine(char* line) {
+CommandDataArray* cmd_buildCommandStructsFromLine(char* line) {
     CommandDataArray* arr = malloc(sizeof(CommandDataArray));
     CommandData* commands = malloc(MAX_COMMANDS_PER_LINE * sizeof(CommandData));
     char*        separatedCommandsEnd;
     char*        separatedCommands = strtok_r(line, "|", &separatedCommandsEnd);
     int          it = 0;
     while (separatedCommands) {
-        buildCommandForProgramFromString(separatedCommands, &commands[it++]);
+        cmd_buildCommandForProgramFromString(separatedCommands,
+                                             &commands[it++]);
         separatedCommands = strtok_r(NULL, "|", &separatedCommandsEnd);
     }
     arr->size = it;
@@ -42,7 +44,7 @@ CommandDataArray* buildCommandStructsFromLine(char* line) {
     return arr;
 }
 
-void freeCommandDataArray(CommandDataArray* commandData) {
+void cmd_freeCommandDataArray(CommandDataArray* commandData) {
     for (int i = 0; i < commandData->size; i++) {
         free(commandData->data[i].argv);
     }
