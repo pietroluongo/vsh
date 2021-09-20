@@ -37,8 +37,6 @@ void showProcessExitStatus(int wstatus, pid_t childPid) {
     }
 }
 
-char* getCommandProgram(CommandData* command) { return command->argv[0]; }
-
 void readCommandFromStdin(char* whereToStore) {
     fgets(whereToStore, MAX_COMMAND_SIZE, stdin);
     utils_rtrim(whereToStore);
@@ -89,8 +87,8 @@ int execForegroundCommand(CommandData* command) {
     checkForkError(pid);
     int wstatus;
     if (utils_isChildProcess(pid)) {
-        int execStatus = execvp(getCommandProgram(command), command->argv);
-        cmd_checkStatus(execStatus);
+        int execStatus = execvp(cmd_getCommandProgram(command), command->argv);
+        cmd_checkStatus(execStatus, cmd_getCommandProgram(command));
     } else {
         waitpid(pid, &wstatus, 0);
         showProcessExitStatus(wstatus, pid);
@@ -121,27 +119,19 @@ int execBackgroundCommands(CommandDataArray* commandList) {
             if (i == 0) {
                 // first process needs to stdout to the first pipe
                 dup2(pipeDescriptors[i][WRITE], STDOUT_FILENO);
-                utils_closeAllPipes(pipeDescriptors, nPipes);
-                execStatus[i] =
-                    execvp(getCommandProgram(command), command->argv);
-                cmd_checkStatus(execStatus[i], getCommandProgram(command));
             } else if (i == nCommands - 1) {
                 // end process needs to stdin from previous pipe
-                dup2(pipeDescriptors[i - 1][READ], STDIN_FILENO);
-                utils_closeAllPipes(pipeDescriptors, nPipes);
-                execStatus[i] =
-                    execvp(getCommandProgram(command), command->argv);
-                cmd_checkStatus(execStatus[i], getCommandProgram(command));
+                cmd_checkStatus(execStatus[i], cmd_getCommandProgram(command));
             } else {
                 /* middle processes need to stdin from previous pipe
                  * and stdout to current pipe */
                 dup2(pipeDescriptors[i - 1][READ], STDIN_FILENO);
                 dup2(pipeDescriptors[i][WRITE], STDOUT_FILENO);
-                utils_closeAllPipes(pipeDescriptors, nPipes);
-                execStatus[i] =
-                    execvp(getCommandProgram(command), command->argv);
-                cmd_checkStatus(execStatus[i], getCommandProgram(command));
             }
+            execStatus[i] =
+                execvp(cmd_getCommandProgram(command), command->argv);
+            cmd_checkStatus(execStatus[i], cmd_getCommandProgram(command));
+            utils_closeAllPipes(pipeDescriptors, nPipes);
             cmd_freeCommandDataArray(commandList);
             exit(0);
         } else {

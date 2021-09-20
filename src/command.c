@@ -53,8 +53,10 @@ void cmd_freeCommandDataArray(CommandDataArray* commandData) {
 }
 
 void cmd_checkStatus(int execStatus, char* command) {
-    if(execStatus == -1) {
+    if (execStatus == -1) {
         printf("Erro executando comando %s\n", command);
         exit(1);
     }
 }
+
+char* cmd_getCommandProgram(CommandData* command) { return command->argv[0]; };
