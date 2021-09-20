@@ -19,6 +19,7 @@ typedef struct commandDataArray {
 void              cmd_printCreatedCommandData(CommandData* cData);
 CommandDataArray* cmd_buildCommandStructsFromLine(char* line);
 void              cmd_freeCommandDataArray(CommandDataArray* commandData);
+void              cmd_checkStatus(int execStatus, char* command);
 void              cmd_buildCommandForProgramFromString(char*        command,
                                                        CommandData* commandData);
 

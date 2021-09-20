@@ -86,17 +86,11 @@ void vsh_mainLoop() {
 int execForegroundCommand(CommandData* command) {
     pid_t pid;
     pid = fork();
-    if (pid == -1) {
-        printf("Erro executando o fork\n");
-        exit(1);
-    }
+    checkForkError(pid);
     int wstatus;
     if (utils_isChildProcess(pid)) {
         int execStatus = execvp(getCommandProgram(command), command->argv);
-        if (execStatus < 0) {
-            printf("Erro executando comando %s\n", getCommandProgram(command));
-            exit(1);
-        }
+        cmd_checkStatus(execStatus);
     } else {
         waitpid(pid, &wstatus, 0);
         showProcessExitStatus(wstatus, pid);
@@ -130,22 +124,14 @@ int execBackgroundCommands(CommandDataArray* commandList) {
                 utils_closeAllPipes(pipeDescriptors, nPipes);
                 execStatus[i] =
                     execvp(getCommandProgram(command), command->argv);
-                if (execStatus < 0) {
-                    printf("Erro executando comando %s\n",
-                           getCommandProgram(command));
-                    exit(1);
-                }
+                cmd_checkStatus(execStatus[i], getCommandProgram(command));
             } else if (i == nCommands - 1) {
                 // end process needs to stdin from previous pipe
                 dup2(pipeDescriptors[i - 1][READ], STDIN_FILENO);
                 utils_closeAllPipes(pipeDescriptors, nPipes);
                 execStatus[i] =
                     execvp(getCommandProgram(command), command->argv);
-                if (execStatus < 0) {
-                    printf("Erro executando comando %s\n",
-                           getCommandProgram(command));
-                    exit(1);
-                }
+                cmd_checkStatus(execStatus[i], getCommandProgram(command));
             } else {
                 /* middle processes need to stdin from previous pipe
                  * and stdout to current pipe */
@@ -154,11 +140,7 @@ int execBackgroundCommands(CommandDataArray* commandList) {
                 utils_closeAllPipes(pipeDescriptors, nPipes);
                 execStatus[i] =
                     execvp(getCommandProgram(command), command->argv);
-                if (execStatus < 0) {
-                    printf("Erro executando comando %s\n",
-                           getCommandProgram(command));
-                    exit(1);
-                }
+                cmd_checkStatus(execStatus[i], getCommandProgram(command));
             }
             cmd_freeCommandDataArray(commandList);
             exit(0);
