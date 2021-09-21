@@ -165,5 +165,6 @@ void setBlockedSignals(sigset_t* mask) {
 
 void vsh_setupInitialSignals() {
     sigset_t blockedSignals;
+    sigemptyset(&blockedSignals);
     setBlockedSignals(&blockedSignals);
 }
