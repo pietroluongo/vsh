@@ -65,7 +65,7 @@ void handleProcessNuke() {
 }
 
 void vsh_mainLoop() {
-    setupSignalsToBeIgnored(1);
+    setupForegroundSignalsToBeIgnored(1);
     for (EVER) {
         printPromptHeader();
         char command[MAX_COMMAND_SIZE];
@@ -102,7 +102,7 @@ int execForegroundCommand(CommandData* command) {
     checkForkError(pid);
     int wstatus;
     if (utils_isChildProcess(pid)) {
-        setupSignalsToBeIgnored(0);
+        setupForegroundSignalsToBeIgnored(0);
         int execStatus = execvp(getCommandProgram(command), command->argv);
         cmd_checkStatus(execStatus, getCommandProgram(command));
     } else {
@@ -132,6 +132,8 @@ int execBackgroundCommands(CommandDataArray* commandList) {
         checkForkError(pid[i]);
         int wstatus;
         if (utils_isChildProcess(pid[i])) {
+            printf("PID %d setting up signals\n", (int) getpid());
+            setupBackgroundSignalsToBeIgnored();
             if (i == 0) {
                 // first process needs to stdout to the first pipe
                 dup2(pipeDescriptors[i][WRITE], STDOUT_FILENO);
@@ -166,7 +168,7 @@ int execBackgroundCommands(CommandDataArray* commandList) {
     printf("Finished executing background commands\n");
 }
 
-void setupSignalsToBeIgnored(int isShell) {
+void setupForegroundSignalsToBeIgnored(int isShell) {
     sigset_t         blockedSignals;
     struct sigaction handler;
     sigemptyset(&blockedSignals);
@@ -186,4 +188,15 @@ void setupSignalsToBeIgnored(int isShell) {
     handler.sa_flags = SA_RESTART;
     sigaction(SIGUSR1, &handler, NULL);
     sigaction(SIGUSR2, &handler, NULL);
+}
+
+void setupBackgroundSignalsToBeIgnored() {
+    struct sigaction handler;
+    handler.sa_handler = SIG_IGN;
+    sigemptyset(&(handler.sa_mask));
+    handler.sa_flags = SA_INTERRUPT;
+    sigaction(SIGINT, &handler, NULL);
+    sigaction(SIGTSTP, &handler, NULL);
+    sigaction(SIGQUIT, &handler, NULL);
+    printf("PROCESS %d IGNOREING\n", (int) getpid());
 }

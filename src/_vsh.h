@@ -51,6 +51,7 @@ static void handleProcessClear();
 static void handleProcessNuke();
 void        checkForkError(pid_t pid);
 void        handleSIGUSR();
-void        setupSignalsToBeIgnored(int isShell);
+void        setupForegroundSignalsToBeIgnored(int isShell);
+void        setupBackgroundSignalsToBeIgnored();
 
 #endif
