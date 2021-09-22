@@ -175,7 +175,10 @@ void setupSignalsToBeIgnored(int isShell) {
         sigaddset(&blockedSignals, SIGTSTP);
         sigaddset(&blockedSignals, SIGQUIT);
         handler.sa_handler = &handleSIGUSR;
-
+        if (sigprocmask(SIG_SETMASK, &blockedSignals, NULL) == -1) {
+            printf("Erro ao configurar mascara de processos.\n");
+            exit(1);
+        }
     } else {
         handler.sa_handler = SIG_IGN;
     }
