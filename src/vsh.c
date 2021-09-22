@@ -1,5 +1,6 @@
 #include "../include/vsh.h"
 
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,6 +25,12 @@ void checkForkError(pid_t pid) {
         printf("Error: fork failed!\n");
         exit(1);
     }
+}
+
+void handleSIGUSR() {
+    printAlligator();
+    printPromptHeader();
+    fflush(stdout);
 }
 
 void showProcessExitStatus(int wstatus, pid_t childPid) {
@@ -58,6 +65,7 @@ void handleProcessNuke() {
 }
 
 void vsh_mainLoop() {
+    setupSignalsToBeIgnored(1);
     for (EVER) {
         printPromptHeader();
         char command[MAX_COMMAND_SIZE];
@@ -94,6 +102,7 @@ int execForegroundCommand(CommandData* command) {
     checkForkError(pid);
     int wstatus;
     if (utils_isChildProcess(pid)) {
+        setupSignalsToBeIgnored(0);
         int execStatus = execvp(getCommandProgram(command), command->argv);
         cmd_checkStatus(execStatus, getCommandProgram(command));
     } else {
@@ -157,19 +166,21 @@ int execBackgroundCommands(CommandDataArray* commandList) {
     printf("Finished executing background commands\n");
 }
 
-void setBlockedSignals(sigset_t* mask) {
-    sigaddset(mask, SIGINT);
-    sigaddset(mask, SIGSTOP);
-    sigaddset(mask, SIGQUIT);
-    int result = sigprocmask(SIG_SETMASK, mask, NULL);
-    if (result == -1) {
-        printf("Erro ao configurar mascara de processos.\n");
-        exit(1);
-    }
-}
-
-void vsh_setupInitialSignals() {
-    sigset_t blockedSignals;
+void setupSignalsToBeIgnored(int isShell) {
+    sigset_t         blockedSignals;
+    struct sigaction handler;
     sigemptyset(&blockedSignals);
-    setBlockedSignals(&blockedSignals);
+    if (isShell) {
+        sigaddset(&blockedSignals, SIGINT);
+        sigaddset(&blockedSignals, SIGTSTP);
+        sigaddset(&blockedSignals, SIGQUIT);
+        handler.sa_handler = &handleSIGUSR;
+
+    } else {
+        handler.sa_handler = SIG_IGN;
+    }
+    handler.sa_mask = blockedSignals;
+    handler.sa_flags = SA_RESTART;
+    sigaction(SIGUSR1, &handler, NULL);
+    sigaction(SIGUSR2, &handler, NULL);
 }

@@ -49,7 +49,8 @@ static int  execForegroundCommand(CommandData* command);
 static int  execBackgroundCommands(CommandDataArray* commandList);
 static void handleProcessClear();
 static void handleProcessNuke();
-void        setBlockedSignals(sigset_t* mask);
 void        checkForkError(pid_t pid);
+void        handleSIGUSR();
+void        setupSignalsToBeIgnored(int isShell);
 
 #endif
