@@ -20,9 +20,8 @@ void              cmd_printCreatedCommandData(CommandData* cData);
 CommandDataArray* cmd_buildCommandStructsFromLine(char* line);
 void              cmd_freeCommandDataArray(CommandDataArray* commandData);
 void              cmd_checkStatus(int execStatus, char* command);
-char*             cmd_getCommandProgram(CommandData* command);
+void              cmd_buildCommandForProgramFromString(char*        command,
+                                                       CommandData* commandData);
 
-void cmd_buildCommandForProgramFromString(char*        command,
-                                          CommandData* commandData);
-
+char* cmd_getCommandProgram(CommandData* command);
 #endif // VSH_COMMAND_H

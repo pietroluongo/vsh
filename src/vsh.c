@@ -37,6 +37,8 @@ void showProcessExitStatus(int wstatus, pid_t childPid) {
     }
 }
 
+char* getCommandProgram(CommandData* command) { return command->argv[0]; }
+
 void readCommandFromStdin(char* whereToStore) {
     fgets(whereToStore, MAX_COMMAND_SIZE, stdin);
     utils_rtrim(whereToStore);
@@ -87,8 +89,8 @@ int execForegroundCommand(CommandData* command) {
     checkForkError(pid);
     int wstatus;
     if (utils_isChildProcess(pid)) {
-        int execStatus = execvp(cmd_getCommandProgram(command), command->argv);
-        cmd_checkStatus(execStatus, cmd_getCommandProgram(command));
+        int execStatus = execvp(getCommandProgram(command), command->argv);
+        cmd_checkStatus(execStatus, getCommandProgram(command));
     } else {
         waitpid(pid, &wstatus, 0);
         showProcessExitStatus(wstatus, pid);
@@ -128,10 +130,9 @@ int execBackgroundCommands(CommandDataArray* commandList) {
                 dup2(pipeDescriptors[i - 1][READ], STDIN_FILENO);
                 dup2(pipeDescriptors[i][WRITE], STDOUT_FILENO);
             }
-            execStatus[i] =
-                execvp(cmd_getCommandProgram(command), command->argv);
-            cmd_checkStatus(execStatus[i], cmd_getCommandProgram(command));
             utils_closeAllPipes(pipeDescriptors, nPipes);
+            execStatus[i] = execvp(getCommandProgram(command), command->argv);
+            cmd_checkStatus(execStatus[i], getCommandProgram(command));
             cmd_freeCommandDataArray(commandList);
             exit(0);
         } else {
@@ -145,7 +146,6 @@ int execBackgroundCommands(CommandDataArray* commandList) {
                     exit(1);
                 }
             }
-            waitpid(pid[i], &wstatus, 0);
             showProcessExitStatus(wstatus, pid[i]);
         }
     }
