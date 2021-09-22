@@ -42,7 +42,7 @@ static int isNukeCommand(char* command) {
 }
 
 static void showProcessExitStatus(int status, pid_t childPid);
-static void readCommandFromStdin(char* whereToStore);
+static int  readCommandFromStdin(char* whereToStore);
 static void printPromptHeader();
 static void printAlligator();
 static int  execForegroundCommand(CommandData* command);

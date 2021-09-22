@@ -39,9 +39,12 @@ void showProcessExitStatus(int wstatus, pid_t childPid) {
 
 char* getCommandProgram(CommandData* command) { return command->argv[0]; }
 
-void readCommandFromStdin(char* whereToStore) {
-    fgets(whereToStore, MAX_COMMAND_SIZE, stdin);
-    utils_rtrim(whereToStore);
+int readCommandFromStdin(char* whereToStore) {
+    if (fgets(whereToStore, MAX_COMMAND_SIZE, stdin)) {
+        utils_rtrim(whereToStore);
+        return 1;
+    }
+    return 0;
 }
 
 void printPromptHeader() { printf("vsh> "); }
@@ -58,7 +61,9 @@ void vsh_mainLoop() {
     for (EVER) {
         printPromptHeader();
         char command[MAX_COMMAND_SIZE];
-        readCommandFromStdin(command);
+        if (!readCommandFromStdin(command)) {
+            break;
+        }
         if (isExitCommand(command)) {
             break;
         } else if (isDebugCommand(command)) {
