@@ -79,8 +79,10 @@ void vsh_mainLoop() {
             continue;
         } else if (isClearCommand(command)) {
             handleProcessClear();
+            continue;
         } else if (isNukeCommand(command)) {
             handleProcessNuke();
+            continue;
         }
         CommandDataArray* parsedCommandList =
             cmd_buildCommandStructsFromLine(command);
@@ -132,7 +134,7 @@ int execBackgroundCommands(CommandDataArray* commandList) {
         checkForkError(pid[i]);
         int wstatus;
         if (utils_isChildProcess(pid[i])) {
-            printf("PID %d setting up signals\n", (int) getpid());
+            printf("PID %d setting up signals\n", (int)getpid());
             setupBackgroundSignalsToBeIgnored();
             if (i == 0) {
                 // first process needs to stdout to the first pipe
@@ -194,9 +196,9 @@ void setupBackgroundSignalsToBeIgnored() {
     struct sigaction handler;
     handler.sa_handler = SIG_IGN;
     sigemptyset(&(handler.sa_mask));
-    handler.sa_flags = SA_INTERRUPT;
+    handler.sa_flags = SA_RESTART;
     sigaction(SIGINT, &handler, NULL);
     sigaction(SIGTSTP, &handler, NULL);
     sigaction(SIGQUIT, &handler, NULL);
-    printf("PROCESS %d IGNOREING\n", (int) getpid());
+    printf("PROCESS %d IGNOREING\n", (int)getpid());
 }
