@@ -61,7 +61,23 @@ void handleProcessClear() {
 }
 
 void handleProcessNuke() {
-    printf("[Shell] TODO: implement process nuking logic\n");
+    FILE* fp;
+    char path[1024];
+    snprintf(path, 1024, "/usr/bin/pgrep -P %d -r S", getpid());
+    fp = popen(path, "r");
+
+    if (fp == NULL) {
+        printf("ERROR opening popen\n");
+        exit(1);
+    }
+
+    while(fgets(path, sizeof(path), fp) != NULL) {
+        int pid = atoi(path);
+        printf("killing process %d and parent is %d\n", pid, getppid());
+        kill((pid_t)pid, SIGKILL);
+
+    }
+    fclose(fp);
 }
 
 void vsh_mainLoop() {
