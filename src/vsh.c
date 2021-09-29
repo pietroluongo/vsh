@@ -57,21 +57,8 @@ int readCommandFromStdin(char* whereToStore) {
 void printPromptHeader() { printf("vsh> "); }
 
 void handleProcessClear() {
-    FILE* fp;
-    char path[1024];
-    snprintf(path, 1024, "/usr/bin/pgrep -P %d -r Z", getpid());
-    fp = popen(path, "r");
-
-    if (fp == NULL) {
-        printf("ERROR opening popen\n");
-        exit(1);
-    }
-
-    while(fgets(path, sizeof(path), fp) != NULL) {
-        int pid = atoi(path);
-        waitpid((pid_t)pid, NULL, 0);
-    }
-    fclose(fp);
+    int status;
+    while(waitpid(-1, &status, WNOHANG) > 0);
 }
 
 void handleProcessNuke() {
@@ -106,17 +93,7 @@ void vsh_mainLoop() {
         } else if (parsedCommandList->size == 1) {
             execForegroundCommand(&parsedCommands[0]);
         } else {
-            CommandDataArray* parsedCommandList =
-                buildCommandStructsFromLine(command);
-            CommandData* parsedCommands = parsedCommandList->data;
-            if (parsedCommandList->size == 0) {
-                continue;
-            } else if (parsedCommandList->size == 1) {
-                execForegroundCommand(&parsedCommands[0]);
-            } else {
-                execBackgroundCommands(parsedCommandList);
-            }
-            freeCommandDataArray(parsedCommandList);
+            execBackgroundCommands(parsedCommandList);
         }
         cmd_freeCommandDataArray(parsedCommandList);
     }
