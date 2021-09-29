@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 
-void printCreatedCommandData(CommandData* cData) {
+void cmd_printCreatedCommandData(CommandData* cData) {
     printf("---------------[ Command ]---------------\n");
-    printf("program: %s\n", getCommandProgram(cData));
+    printf("program: %s\n", cmd_getCommandProgram(cData));
     printf("args: [ ");
     for (int i = 0; i < cData->argc - 1; i++) {
         printf("%s, ", cData->argv[i]);
@@ -13,8 +13,9 @@ void printCreatedCommandData(CommandData* cData) {
     printf("-----------------------------------------\n");
 }
 
-void buildCommandForProgramFromString(char* command, CommandData* commandData) {
-    char** argv = malloc((MAX_COMMAND_ARGS * sizeof(char*)) + 1);
+void cmd_buildCommandForProgramFromString(char*        command,
+                                          CommandData* commandData) {
+    char** argv = malloc(((1 + MAX_COMMAND_ARGS) * sizeof(char*)) + 1);
     char*  separatedArgsEnd;
     char*  separatedArgs = strtok_r(command, " ", &separatedArgsEnd);
     int    it = 0;
@@ -22,19 +23,21 @@ void buildCommandForProgramFromString(char* command, CommandData* commandData) {
         argv[it++] = separatedArgs;
         separatedArgs = strtok_r(NULL, " ", &separatedArgsEnd);
     }
+    argv[it++] = NULL;
     commandData->argv = argv;
     commandData->argc = it;
-    printCreatedCommandData(commandData);
+    cmd_printCreatedCommandData(commandData);
 }
 
-CommandDataArray* buildCommandStructsFromLine(char* line) {
+CommandDataArray* cmd_buildCommandStructsFromLine(char* line) {
     CommandDataArray* arr = malloc(sizeof(CommandDataArray));
     CommandData* commands = malloc(MAX_COMMANDS_PER_LINE * sizeof(CommandData));
     char*        separatedCommandsEnd;
     char*        separatedCommands = strtok_r(line, "|", &separatedCommandsEnd);
     int          it = 0;
     while (separatedCommands) {
-        buildCommandForProgramFromString(separatedCommands, &commands[it++]);
+        cmd_buildCommandForProgramFromString(separatedCommands,
+                                             &commands[it++]);
         separatedCommands = strtok_r(NULL, "|", &separatedCommandsEnd);
     }
     arr->size = it;
@@ -42,10 +45,19 @@ CommandDataArray* buildCommandStructsFromLine(char* line) {
     return arr;
 }
 
-void freeCommandDataArray(CommandDataArray* commandData) {
+void cmd_freeCommandDataArray(CommandDataArray* commandData) {
     for (int i = 0; i < commandData->size; i++) {
         free(commandData->data[i].argv);
     }
     free(commandData->data);
     free(commandData);
 }
+
+void cmd_checkStatus(int execStatus, char* command) {
+    if (execStatus == -1) {
+        printf("Erro executando comando %s\n", command);
+        exit(1);
+    }
+}
+
+char* cmd_getCommandProgram(CommandData* command) { return command->argv[0]; };

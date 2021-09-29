@@ -1,5 +1,6 @@
 #include "../include/vsh.h"
 
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,10 +11,26 @@
 #include "../include/utils.h"
 #include "./_vsh.h"
 
+#define READ  0
+#define WRITE 1
+
 void printAlligator() {
     for (int i = 0; i < VSH_ALLIGATOR_SIZE; i++) {
         printf("%s", vaccinatedGuy[i]);
     }
+}
+
+void checkForkError(pid_t pid) {
+    if (pid == -1) {
+        printf("Error: fork failed!\n");
+        exit(1);
+    }
+}
+
+void handleSIGUSR() {
+    printAlligator();
+    printPromptHeader();
+    fflush(stdout);
 }
 
 void showProcessExitStatus(int wstatus, pid_t childPid) {
@@ -29,9 +46,12 @@ void showProcessExitStatus(int wstatus, pid_t childPid) {
 
 char* getCommandProgram(CommandData* command) { return command->argv[0]; }
 
-void readCommandFromStdin(char* whereToStore) {
-    fgets(whereToStore, MAX_COMMAND_SIZE, stdin);
-    utils_rtrim(whereToStore);
+int readCommandFromStdin(char* whereToStore) {
+    if (fgets(whereToStore, MAX_COMMAND_SIZE, stdin)) {
+        utils_rtrim(whereToStore);
+        return 1;
+    }
+    return 0;
 }
 
 void printPromptHeader() { printf("vsh> "); }
@@ -59,10 +79,13 @@ void handleProcessNuke() {
 }
 
 void vsh_mainLoop() {
+    setupForegroundSignalsToBeIgnored(1);
     for (EVER) {
         printPromptHeader();
         char command[MAX_COMMAND_SIZE];
-        readCommandFromStdin(command);
+        if (!readCommandFromStdin(command)) {
+            break;
+        }
         if (isExitCommand(command)) {
             break;
         } else if (isDebugCommand(command)) {
@@ -70,8 +93,18 @@ void vsh_mainLoop() {
             continue;
         } else if (isClearCommand(command)) {
             handleProcessClear();
+            continue;
         } else if (isNukeCommand(command)) {
             handleProcessNuke();
+            continue;
+        }
+        CommandDataArray* parsedCommandList =
+            cmd_buildCommandStructsFromLine(command);
+        CommandData* parsedCommands = parsedCommandList->data;
+        if (parsedCommandList->size == 0) {
+            continue;
+        } else if (parsedCommandList->size == 1) {
+            execForegroundCommand(&parsedCommands[0]);
         } else {
             CommandDataArray* parsedCommandList =
                 buildCommandStructsFromLine(command);
@@ -85,125 +118,111 @@ void vsh_mainLoop() {
             }
             freeCommandDataArray(parsedCommandList);
         }
+        cmd_freeCommandDataArray(parsedCommandList);
     }
 }
 
 int execForegroundCommand(CommandData* command) {
     pid_t pid;
     pid = fork();
-    if (pid == -1) {
-        printf("Erro executando o fork\n");
-        exit(1);
-    }
+    checkForkError(pid);
     int wstatus;
     if (utils_isChildProcess(pid)) {
-        int execStat = execvp(getCommandProgram(command), command->argv);
-        if (execStat < 0) {
-            printf("Erro executando comando %s\n", getCommandProgram(command));
-            exit(1);
-        }
+        setupForegroundSignalsToBeIgnored(0);
+        int execStatus = execvp(getCommandProgram(command), command->argv);
+        cmd_checkStatus(execStatus, getCommandProgram(command));
     } else {
         waitpid(pid, &wstatus, 0);
         showProcessExitStatus(wstatus, pid);
     }
 }
 
-void closeAllUnusedPipes(int (*fd)[2], int nPipes) {
-    for (int i = 0; i < nPipes; i++) {
-        close(fd[i][0]);
-        close(fd[i][1]);
-    }
-}
-
 int execBackgroundCommands(CommandDataArray* commandList) {
-    int nCommands = (int)commandList->size;
+    int   nCommands = (int)commandList->size;
     pid_t pid[nCommands];
-    int execStat[nCommands];
-    int nPipes = nCommands - 1;
-    int fd[nPipes][2];
+    int   execStatus[nCommands];
+    int   nPipes = nCommands - 1;
+    int   pipeDescriptors[nPipes][2];
 
-    for(int i = 0; i < nPipes; i++) {
-        if (pipe(fd[i]) < 0) {
+    for (int i = 0; i < nPipes; i++) {
+        if (pipe(pipeDescriptors[i]) < 0) {
             printf("ERROR creating pipe with index %d\n", i);
-            for(int j = 0; j < i; j++) {
-                close(fd[j][0]);
-                close(fd[j][1]);
-            }
+            utils_closeAllPipes(pipeDescriptors, i);
             exit(1);
         }
     }
 
-    for(int i = 0; i < nCommands; i++) {
+    for (int i = 0; i < nCommands; i++) {
         CommandData* command = &commandList->data[i];
         pid[i] = fork();
-        if (pid[i] == -1) {
-                printf("ERROR forking with index %d\n", i);
-                exit(1); 
-        }
+        checkForkError(pid[i]);
         int wstatus;
         if (utils_isChildProcess(pid[i])) {
+            printf("PID %d setting up signals\n", (int)getpid());
+            setupBackgroundSignalsToBeIgnored();
             if (i == 0) {
                 // first process needs to stdout to the first pipe
-                dup2(fd[i][1], STDOUT_FILENO);
-                closeAllUnusedPipes(fd, nPipes);
-                execStat[i] = execvp(getCommandProgram(command), command->argv);
-                if (execStat < 0) {
-                    printf("Erro executando comando %s\n", getCommandProgram(command));
-                    exit(1);
-                }
+                dup2(pipeDescriptors[i][WRITE], STDOUT_FILENO);
             } else if (i == nCommands - 1) {
                 // end process needs to stdin from previous pipe
-                dup2(fd[i - 1][0], STDIN_FILENO);
-                closeAllUnusedPipes(fd, nPipes);
-                execStat[i] = execvp(getCommandProgram(command), command->argv);
-                if (execStat < 0) {
-                    printf("Erro executando comando %s\n", getCommandProgram(command));
-                    exit(1);
-                }
+                dup2(pipeDescriptors[i - 1][READ], STDIN_FILENO);
             } else {
                 /* middle processes need to stdin from previous pipe
-                 * and stdout to current pipe */ 
-                dup2(fd[i - 1][0], STDIN_FILENO);
-                dup2(fd[i][1], STDOUT_FILENO);
-                closeAllUnusedPipes(fd, nPipes);
-                execStat[i] = execvp(getCommandProgram(command), command->argv);
-                if (execStat < 0) {
-                    printf("Erro executando comando %s\n", getCommandProgram(command));
-                    exit(1);
-                }
+                 * and stdout to current pipe */
+                dup2(pipeDescriptors[i - 1][READ], STDIN_FILENO);
+                dup2(pipeDescriptors[i][WRITE], STDOUT_FILENO);
             }
-            freeCommandDataArray(commandList);
+            utils_closeAllPipes(pipeDescriptors, nPipes);
+            execStatus[i] = execvp(getCommandProgram(command), command->argv);
+            cmd_checkStatus(execStatus[i], getCommandProgram(command));
+            cmd_freeCommandDataArray(commandList);
             exit(0);
         } else {
             if (i > 0) {
-                if (close(fd[i - 1][0])) {
+                if (close(pipeDescriptors[i - 1][READ])) {
                     printf("error closing pipe %d %d\n", i - 1, 0);
                     exit(1);
                 }
-                if (close(fd[i - 1][1])) {
+                if (close(pipeDescriptors[i - 1][WRITE])) {
                     printf("error closing pipe %d %d\n", i - 1, 0);
                     exit(1);
                 }
             }
-            // waitpid(pid[i], &wstatus, 0);
-            // showProcessExitStatus(wstatus, pid[i]);
+            showProcessExitStatus(wstatus, pid[i]);
         }
     }
     printf("Finished executing background commands\n");
 }
 
-void setBlockedSignals(sigset_t* mask) {
-    sigaddset(mask, SIGINT);
-    sigaddset(mask, SIGSTOP);
-    sigaddset(mask, SIGQUIT);
-    int result = sigprocmask(SIG_SETMASK, mask, NULL);
-    if (result == -1) {
-        printf("Erro ao configurar mascara de processos.\n");
-        exit(1);
+void setupForegroundSignalsToBeIgnored(int isShell) {
+    sigset_t         blockedSignals;
+    struct sigaction handler;
+    sigemptyset(&blockedSignals);
+    if (isShell) {
+        sigaddset(&blockedSignals, SIGINT);
+        sigaddset(&blockedSignals, SIGTSTP);
+        sigaddset(&blockedSignals, SIGQUIT);
+        handler.sa_handler = &handleSIGUSR;
+        if (sigprocmask(SIG_SETMASK, &blockedSignals, NULL) == -1) {
+            printf("Erro ao configurar mascara de processos.\n");
+            exit(1);
+        }
+    } else {
+        handler.sa_handler = SIG_IGN;
     }
+    handler.sa_mask = blockedSignals;
+    handler.sa_flags = SA_RESTART;
+    sigaction(SIGUSR1, &handler, NULL);
+    sigaction(SIGUSR2, &handler, NULL);
 }
 
-void vsh_setupInitialSignals() {
-    sigset_t blockedSignals;
-    setBlockedSignals(&blockedSignals);
+void setupBackgroundSignalsToBeIgnored() {
+    struct sigaction handler;
+    handler.sa_handler = SIG_IGN;
+    sigemptyset(&(handler.sa_mask));
+    handler.sa_flags = SA_RESTART;
+    sigaction(SIGINT, &handler, NULL);
+    sigaction(SIGTSTP, &handler, NULL);
+    sigaction(SIGQUIT, &handler, NULL);
+    printf("PROCESS %d IGNOREING\n", (int)getpid());
 }

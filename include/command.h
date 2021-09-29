@@ -16,10 +16,12 @@ typedef struct commandDataArray {
     ssize_t      size;
 } CommandDataArray;
 
-void              printCreatedCommandData(CommandData* cData);
-CommandDataArray* buildCommandStructsFromLine(char* line);
-char*             getCommandProgram(CommandData* command);
-void              freeCommandDataArray(CommandDataArray* commandData);
-void buildCommandForProgramFromString(char* command, CommandData* commandData);
+void              cmd_printCreatedCommandData(CommandData* cData);
+CommandDataArray* cmd_buildCommandStructsFromLine(char* line);
+void              cmd_freeCommandDataArray(CommandDataArray* commandData);
+void              cmd_checkStatus(int execStatus, char* command);
+void              cmd_buildCommandForProgramFromString(char*        command,
+                                                       CommandData* commandData);
 
+char* cmd_getCommandProgram(CommandData* command);
 #endif // VSH_COMMAND_H

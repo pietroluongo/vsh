@@ -5,7 +5,6 @@
 #include <stdlib.h>
 
 int main() {
-    vsh_setupInitialSignals();
     vsh_mainLoop();
     return 0;
 }

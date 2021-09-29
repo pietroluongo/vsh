@@ -42,13 +42,16 @@ static int isNukeCommand(char* command) {
 }
 
 static void showProcessExitStatus(int status, pid_t childPid);
-static void readCommandFromStdin(char* whereToStore);
+static int  readCommandFromStdin(char* whereToStore);
 static void printPromptHeader();
 static void printAlligator();
 static int  execForegroundCommand(CommandData* command);
 static int  execBackgroundCommands(CommandDataArray* commandList);
 static void handleProcessClear();
 static void handleProcessNuke();
-void        setBlockedSignals(sigset_t* mask);
+void        checkForkError(pid_t pid);
+void        handleSIGUSR();
+void        setupForegroundSignalsToBeIgnored(int isShell);
+void        setupBackgroundSignalsToBeIgnored();
 
 #endif
