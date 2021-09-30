@@ -57,7 +57,11 @@ int readCommandFromStdin(char* whereToStore) {
     return 0;
 }
 
-void printPromptHeader() { printf("vsh> "); }
+void printPromptHeader() {
+    printf("\033[0;34m");
+    printf("vsh> ");
+    printf("\033[0m");
+}
 
 void handleProcessClear() {
     int status;
@@ -67,7 +71,7 @@ void handleProcessClear() {
 void handleProcessNuke() {
     FILE* fp;
     char path[1024];
-    snprintf(path, 1024, "/usr/bin/pgrep -P %d -r S", getpid());
+    snprintf(path, 1024, "/usr/bin/pgrep -P %d -r RS", getpid());
     fp = popen(path, "r");
 
     if (fp == NULL) {
@@ -78,7 +82,7 @@ void handleProcessNuke() {
     while(fgets(path, sizeof(path), fp) != NULL) {
         int pid = atoi(path);
         printf("killing process %d and parent is %d\n", pid, getppid());
-        kill((pid_t)pid, SIGKILL);
+        killpg(pid, SIGKILL);
 
     }
     fclose(fp);
@@ -134,10 +138,8 @@ int execForegroundCommand(CommandData* command) {
 }
 
 void handleSIGUSRInBackground(){
-    
     pid_t group_id = getpgid(getpid());
     killpg(group_id, SIGKILL);
-
 }
 
 int execBackgroundCommands(CommandDataArray* commandList) {
