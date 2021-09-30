@@ -131,57 +131,64 @@ int execForegroundCommand(CommandData* command) {
 }
 
 int execBackgroundCommands(CommandDataArray* commandList) {
-    int   nCommands = (int)commandList->size;
-    pid_t pid[nCommands];
-    int   execStatus[nCommands];
-    int   nPipes = nCommands - 1;
-    int   pipeDescriptors[nPipes][2];
-
-    for (int i = 0; i < nPipes; i++) {
-        if (pipe(pipeDescriptors[i]) < 0) {
-            printf("ERROR creating pipe with index %d\n", i);
-            utils_closeAllPipes(pipeDescriptors, i);
-            exit(1);
-        }
+    pid_t pid = fork();
+    if (pid == -1){
+        exit(1); 
     }
+    if (pid == 0) {
+        pid_t sid = setsid();
+        int   nCommands = (int)commandList->size;
+        pid_t pid[nCommands];
+        int   execStatus[nCommands];
+        int   nPipes = nCommands - 1;
+        int   pipeDescriptors[nPipes][2];
 
-    for (int i = 0; i < nCommands; i++) {
-        CommandData* command = &commandList->data[i];
-        pid[i] = fork();
-        checkForkError(pid[i]);
-        int wstatus;
-        if (utils_isChildProcess(pid[i])) {
-            printf("PID %d setting up signals\n", (int)getpid());
-            setupBackgroundSignalsToBeIgnored();
-            if (i == 0) {
-                // first process needs to stdout to the first pipe
-                dup2(pipeDescriptors[i][WRITE], STDOUT_FILENO);
-            } else if (i == nCommands - 1) {
-                // end process needs to stdin from previous pipe
-                dup2(pipeDescriptors[i - 1][READ], STDIN_FILENO);
+        for (int i = 0; i < nPipes; i++) {
+            if (pipe(pipeDescriptors[i]) < 0) {
+                printf("ERROR creating pipe with index %d\n", i);
+                utils_closeAllPipes(pipeDescriptors, i);
+                exit(1);
+            }
+        }
+
+        for (int i = 0; i < nCommands; i++) {
+            CommandData* command = &commandList->data[i];
+            pid[i] = fork();
+            checkForkError(pid[i]);
+            int wstatus;
+            if (utils_isChildProcess(pid[i])) {
+                printf("PID %d setting up signals\n", (int)getpid());
+                setupBackgroundSignalsToBeIgnored();
+                if (i == 0) {
+                    // first process needs to stdout to the first pipe
+                    dup2(pipeDescriptors[i][WRITE], STDOUT_FILENO);
+                } else if (i == nCommands - 1) {
+                    // end process needs to stdin from previous pipe
+                    dup2(pipeDescriptors[i - 1][READ], STDIN_FILENO);
+                } else {
+                    /* middle processes need to stdin from previous pipe
+                    * and stdout to current pipe */
+                    dup2(pipeDescriptors[i - 1][READ], STDIN_FILENO);
+                    dup2(pipeDescriptors[i][WRITE], STDOUT_FILENO);
+                }
+                utils_closeAllPipes(pipeDescriptors, nPipes);
+                execStatus[i] = execvp(getCommandProgram(command), command->argv);
+                cmd_checkStatus(execStatus[i], getCommandProgram(command));
+                cmd_freeCommandDataArray(commandList);
+                exit(0);
             } else {
-                /* middle processes need to stdin from previous pipe
-                 * and stdout to current pipe */
-                dup2(pipeDescriptors[i - 1][READ], STDIN_FILENO);
-                dup2(pipeDescriptors[i][WRITE], STDOUT_FILENO);
-            }
-            utils_closeAllPipes(pipeDescriptors, nPipes);
-            execStatus[i] = execvp(getCommandProgram(command), command->argv);
-            cmd_checkStatus(execStatus[i], getCommandProgram(command));
-            cmd_freeCommandDataArray(commandList);
-            exit(0);
-        } else {
-            if (i > 0) {
-                if (close(pipeDescriptors[i - 1][READ])) {
-                    printf("error closing pipe %d %d\n", i - 1, 0);
-                    exit(1);
+                if (i > 0) {
+                    if (close(pipeDescriptors[i - 1][READ])) {
+                        printf("error closing pipe %d %d\n", i - 1, 0);
+                        exit(1);
+                    }
+                    if (close(pipeDescriptors[i - 1][WRITE])) {
+                        printf("error closing pipe %d %d\n", i - 1, 0);
+                        exit(1);
+                    }
                 }
-                if (close(pipeDescriptors[i - 1][WRITE])) {
-                    printf("error closing pipe %d %d\n", i - 1, 0);
-                    exit(1);
-                }
+                showProcessExitStatus(wstatus, pid[i]);
             }
-            showProcessExitStatus(wstatus, pid[i]);
         }
     }
     printf("Finished executing background commands\n");
