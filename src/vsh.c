@@ -74,7 +74,8 @@ void handleProcessClear() {
 void handleProcessNuke() {
     FILE* pgrepResult;
     char  pgrepCmd[MAX_PGREP_LENGTH];
-    snprintf(pgrepCmd, MAX_PGREP_LENGTH, "/usr/bin/pgrep -P %d -r RS", getpid());
+    snprintf(pgrepCmd, MAX_PGREP_LENGTH, "/usr/bin/pgrep -P %d -r RS",
+             getpid());
     pgrepResult = popen(pgrepCmd, "r");
 
     if (pgrepResult == NULL) {
