@@ -1,3 +1,4 @@
+# Componentes do Grupo: Gabriel Pietroluongo e Otávio Sales
 # OBJS	= ./build/fileSorter.o ./build/fileMerger.o ./build/tokenizer.o ./build/heap.o ./build/main.o
 
 OBJS = ./build/main.o ./build/vsh.o ./build/utils.o ./build/command.o
