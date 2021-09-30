@@ -5,7 +5,7 @@ SOURCE = client/main.c src/vsh.c src/utils.c src/command.c
 
 OUT = vsh
 CC	 = gcc
-FLAGS = -O3 -c -DNDEBUG -std=gnu11
+FLAGS = -c -DNDEBUG -std=gnu11
 LFLAGS	 = -lm 
 
 all: | mkBuildDir $(OBJS)
