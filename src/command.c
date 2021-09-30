@@ -26,7 +26,6 @@ void cmd_buildCommandForProgramFromString(char*        command,
     argv[it++] = NULL;
     commandData->argv = argv;
     commandData->argc = it;
-    cmd_printCreatedCommandData(commandData);
 }
 
 CommandDataArray* cmd_buildCommandStructsFromLine(char* line) {

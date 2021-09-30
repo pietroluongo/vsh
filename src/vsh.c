@@ -67,8 +67,7 @@ void printPromptHeader() {
 
 void handleProcessClear() {
     int status;
-    while (waitpid(-1, &status, WNOHANG) > 0)
-        ;
+    while (waitpid(-1, &status, WNOHANG) > 0);
 }
 
 void handleProcessNuke() {
@@ -85,7 +84,6 @@ void handleProcessNuke() {
 
     while (fgets(pgrepCmd, sizeof(pgrepCmd), pgrepResult) != NULL) {
         int pid = atoi(pgrepCmd);
-        printf("killing process %d and parent is %d\n", pid, getppid());
         killpg(pid, SIGKILL);
     }
     fclose(pgrepResult);
@@ -136,7 +134,7 @@ void execForegroundCommand(CommandData* command) {
         cmd_checkStatus(execStatus, getCommandProgram(command));
     } else {
         waitpid(pid, &wstatus, 0);
-        showProcessExitStatus(wstatus, pid);
+        //showProcessExitStatus(wstatus, pid);
     }
 }
 
@@ -170,7 +168,6 @@ void execBackgroundCommands(CommandDataArray* commandList) {
             checkForkError(pid[i]);
             int wstatus = 0;
             if (utils_isChildProcess(pid[i])) {
-                printf("PID %d setting up signals\n", (int)getpid());
                 setupBackgroundSignalsToBeIgnored();
                 if (i == 0) {
                     // first process needs to stdout to the first pipe
@@ -201,7 +198,7 @@ void execBackgroundCommands(CommandDataArray* commandList) {
                         exit(1);
                     }
                 }
-                showProcessExitStatus(wstatus, pid[i]);
+                //showProcessExitStatus(wstatus, pid[i]);
             }
         }
         int status;
@@ -215,7 +212,6 @@ void execBackgroundCommands(CommandDataArray* commandList) {
         }
         exit(0);
     }
-    printf("Finished executing background commands\n");
 }
 /**
  * Setups the signals to be ignored from a foreground process
@@ -253,5 +249,4 @@ void setupBackgroundSignalsToBeIgnored() {
     sigaction(SIGINT, &handler, NULL);
     sigaction(SIGTSTP, &handler, NULL);
     sigaction(SIGQUIT, &handler, NULL);
-    printf("PROCESS %d IGNOREING\n", (int)getpid());
 }
