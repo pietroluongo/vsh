@@ -124,7 +124,7 @@ void vsh_mainLoop() {
     }
 }
 
-int execForegroundCommand(CommandData* command) {
+void execForegroundCommand(CommandData* command) {
     pid_t pid;
     pid = fork();
     checkForkError(pid);
@@ -144,7 +144,7 @@ void handleSIGUSRInBackground() {
     killpg(group_id, SIGKILL);
 }
 
-int execBackgroundCommands(CommandDataArray* commandList) {
+void execBackgroundCommands(CommandDataArray* commandList) {
     pid_t proxyPID = fork();
     checkForkError(proxyPID);
     if (utils_isChildProcess(proxyPID)) {
@@ -216,7 +216,10 @@ int execBackgroundCommands(CommandDataArray* commandList) {
     }
     printf("Finished executing background commands\n");
 }
-
+/**
+ * Setups the signals to be ignored from a foreground process
+ * @param isShell Wether the callee is the shell itself or not
+ */
 void setupForegroundSignalsToBeIgnored(int isShell) {
     sigset_t         blockedSignals;
     struct sigaction handler;
@@ -238,7 +241,9 @@ void setupForegroundSignalsToBeIgnored(int isShell) {
     sigaction(SIGUSR1, &handler, NULL);
     sigaction(SIGUSR2, &handler, NULL);
 }
-
+/**
+ * Setups the signals to be ignored by a background process
+ */
 void setupBackgroundSignalsToBeIgnored() {
     struct sigaction handler;
     handler.sa_handler = SIG_IGN;
