@@ -6,11 +6,14 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include "../include/command.h"
 #include "../include/utils.h"
 #include "./_vsh.h"
 
+#define USR1_SIGNAL 10
+#define USR2_SIGNAL 12
 #define READ  0
 #define WRITE 1
 
@@ -130,6 +133,13 @@ int execForegroundCommand(CommandData* command) {
     }
 }
 
+void handleSIGUSRInBackground(){
+    
+    pid_t group_id = getpgid(getpid());
+    killpg(group_id, SIGKILL);
+
+}
+
 int execBackgroundCommands(CommandDataArray* commandList) {
     pid_t pid = fork();
     if (pid == -1){
@@ -190,6 +200,16 @@ int execBackgroundCommands(CommandDataArray* commandList) {
                 showProcessExitStatus(wstatus, pid[i]);
             }
         }
+        int status;
+        while (1) {
+            if (((waitpid(-1, &status, WNOHANG)) == -1) && (errno == ECHILD))
+                break; 
+
+            if (status == USR1_SIGNAL || status == USR2_SIGNAL) {
+                handleSIGUSRInBackground();
+            } 
+        }
+        exit(0);
     }
     printf("Finished executing background commands\n");
 }
