@@ -1,12 +1,12 @@
 #include "../include/vsh.h"
 
+#include <errno.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <errno.h>
 
 #include "../include/command.h"
 #include "../include/utils.h"
@@ -14,8 +14,10 @@
 
 #define USR1_SIGNAL 10
 #define USR2_SIGNAL 12
-#define READ  0
-#define WRITE 1
+#define READ        0
+#define WRITE       1
+
+#define MAX_PGREP_LENGTH 1024
 
 void printAlligator() {
     for (int i = 0; i < VSH_ALLIGATOR_SIZE; i++) {
@@ -65,27 +67,27 @@ void printPromptHeader() {
 
 void handleProcessClear() {
     int status;
-    while(waitpid(-1, &status, WNOHANG) > 0);
+    while (waitpid(-1, &status, WNOHANG) > 0)
+        ;
 }
 
 void handleProcessNuke() {
-    FILE* fp;
-    char path[1024];
-    snprintf(path, 1024, "/usr/bin/pgrep -P %d -r RS", getpid());
-    fp = popen(path, "r");
+    FILE* pgrepResult;
+    char  pgrepCmd[MAX_PGREP_LENGTH];
+    snprintf(pgrepCmd, MAX_PGREP_LENGTH, "/usr/bin/pgrep -P %d -r RS", getpid());
+    pgrepResult = popen(pgrepCmd, "r");
 
-    if (fp == NULL) {
+    if (pgrepResult == NULL) {
         printf("ERROR opening popen\n");
         exit(1);
     }
 
-    while(fgets(path, sizeof(path), fp) != NULL) {
-        int pid = atoi(path);
+    while (fgets(pgrepCmd, sizeof(pgrepCmd), pgrepResult) != NULL) {
+        int pid = atoi(pgrepCmd);
         printf("killing process %d and parent is %d\n", pid, getppid());
         killpg(pid, SIGKILL);
-
     }
-    fclose(fp);
+    fclose(pgrepResult);
 }
 
 void vsh_mainLoop() {
@@ -137,18 +139,16 @@ int execForegroundCommand(CommandData* command) {
     }
 }
 
-void handleSIGUSRInBackground(){
+void handleSIGUSRInBackground() {
     pid_t group_id = getpgid(getpid());
     killpg(group_id, SIGKILL);
 }
 
 int execBackgroundCommands(CommandDataArray* commandList) {
-    pid_t pid = fork();
-    if (pid == -1){
-        exit(1); 
-    }
-    if (pid == 0) {
-        pid_t sid = setsid();
+    pid_t proxyPID = fork();
+    checkForkError(proxyPID);
+    if (utils_isChildProcess(proxyPID)) {
+        setsid();
         int   nCommands = (int)commandList->size;
         pid_t pid[nCommands];
         int   execStatus[nCommands];
@@ -167,7 +167,7 @@ int execBackgroundCommands(CommandDataArray* commandList) {
             CommandData* command = &commandList->data[i];
             pid[i] = fork();
             checkForkError(pid[i]);
-            int wstatus;
+            int wstatus = 0;
             if (utils_isChildProcess(pid[i])) {
                 printf("PID %d setting up signals\n", (int)getpid());
                 setupBackgroundSignalsToBeIgnored();
@@ -179,12 +179,13 @@ int execBackgroundCommands(CommandDataArray* commandList) {
                     dup2(pipeDescriptors[i - 1][READ], STDIN_FILENO);
                 } else {
                     /* middle processes need to stdin from previous pipe
-                    * and stdout to current pipe */
+                     * and stdout to current pipe */
                     dup2(pipeDescriptors[i - 1][READ], STDIN_FILENO);
                     dup2(pipeDescriptors[i][WRITE], STDOUT_FILENO);
                 }
                 utils_closeAllPipes(pipeDescriptors, nPipes);
-                execStatus[i] = execvp(getCommandProgram(command), command->argv);
+                execStatus[i] =
+                    execvp(getCommandProgram(command), command->argv);
                 cmd_checkStatus(execStatus[i], getCommandProgram(command));
                 cmd_freeCommandDataArray(commandList);
                 exit(0);
@@ -205,11 +206,11 @@ int execBackgroundCommands(CommandDataArray* commandList) {
         int status;
         while (1) {
             if (((waitpid(-1, &status, WNOHANG)) == -1) && (errno == ECHILD))
-                break; 
+                break;
 
             if (status == USR1_SIGNAL || status == USR2_SIGNAL) {
                 handleSIGUSRInBackground();
-            } 
+            }
         }
         exit(0);
     }
